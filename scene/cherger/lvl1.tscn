@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://dhk6u1juu38s1"]
+
+[ext_resource type="Script" uid="uid://pqbligwl4mhi" path="res://scene/bot_charger.gd" id="2_vxhyn"]
+
+[sub_resource type="Resource" id="Resource_7u4e1"]
+metadata/__load_path__ = "res://assets/chargerset.aseprite"
+
+[node name="Charger" type="Sprite2D" groups=["Charger"]]
+position = Vector2(0, -1)
+texture = SubResource("Resource_7u4e1")
+offset = Vector2(0, 1)
+region_enabled = true
+region_rect = Rect2(0, 0, 16, 16)
+script = ExtResource("2_vxhyn")

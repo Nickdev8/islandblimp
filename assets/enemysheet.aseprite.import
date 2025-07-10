@@ -1,0 +1,24 @@
+[remap]
+
+importer="Aseprite AnimatedSprite2D Import"
+type="PackedScene"
+uid="uid://5ar7yfdmli1r"
+valid=false
+
+[deps]
+
+source_file="res://assets/enemysheet.aseprite"
+
+[params]
+
+spritesheet/layout=1
+spritesheet/fixed_rows_count=5
+spritesheet/fixed_columns_count=8
+spritesheet/border_type=0
+spritesheet/trim=false
+spritesheet/ignore_empty=true
+spritesheet/merge_duplicates=false
+animation/default/name="default"
+animation/default/direction=0
+animation/default/repeat_count=0
+animation/autoplay=""

@@ -1,0 +1,183 @@
+[gd_scene load_steps=20 format=3 uid="uid://dk4k2n63jkkf"]
+
+[ext_resource type="Texture2D" uid="uid://b58xcj8bsedfx" path="res://assets/Chicken_Sprite_Sheet.png" id="1_cyk6s"]
+[ext_resource type="Script" uid="uid://5o322vnlvvom" path="res://scripts/companion.gd" id="1_wuydb"]
+[ext_resource type="Texture2D" uid="uid://c1yb74x4w8qlk" path="res://assets/feather.png" id="3_6aun5"]
+[ext_resource type="PackedScene" uid="uid://dr72leak5qos7" path="res://scene/shadow.tscn" id="4_vb02r"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wp11h"]
+atlas = ExtResource("1_cyk6s")
+region = Rect2(0, 16, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_i2avp"]
+atlas = ExtResource("1_cyk6s")
+region = Rect2(128, 16, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_pmbl2"]
+atlas = ExtResource("1_cyk6s")
+region = Rect2(256, 16, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ahuug"]
+atlas = ExtResource("1_cyk6s")
+region = Rect2(384, 16, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_q7br4"]
+atlas = ExtResource("1_cyk6s")
+region = Rect2(0, 32, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_evwml"]
+atlas = ExtResource("1_cyk6s")
+region = Rect2(128, 32, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_7mviq"]
+atlas = ExtResource("1_cyk6s")
+region = Rect2(256, 32, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_1y3c1"]
+atlas = ExtResource("1_cyk6s")
+region = Rect2(384, 32, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ibumw"]
+atlas = ExtResource("1_cyk6s")
+region = Rect2(0, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_6h8yj"]
+atlas = ExtResource("1_cyk6s")
+region = Rect2(128, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_1nsgm"]
+atlas = ExtResource("1_cyk6s")
+region = Rect2(256, 0, 16, 16)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_klh4f"]
+atlas = ExtResource("1_cyk6s")
+region = Rect2(384, 0, 16, 16)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_eh516"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_wp11h")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_i2avp")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_pmbl2")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ahuug")
+}],
+"loop": true,
+"name": &"bobbing",
+"speed": 12.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_q7br4")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_evwml")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_7mviq")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_1y3c1")
+}],
+"loop": false,
+"name": &"sit",
+"speed": 12.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ibumw")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_6h8yj")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_1nsgm")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_klh4f")
+}],
+"loop": true,
+"name": &"walk",
+"speed": 12.0
+}]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_nieyc"]
+radius = 4.0
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_7msik"]
+particle_flag_disable_z = true
+direction = Vector3(0, 1, 0)
+spread = 107.454
+initial_velocity_min = 75.0
+initial_velocity_max = 85.0
+gravity = Vector3(0, 98, 0)
+damping_min = 61.383
+damping_max = 100.0
+scale_min = 0.3
+scale_max = 0.7
+turbulence_enabled = true
+turbulence_influence_min = 0.05
+turbulence_influence_max = 0.05
+
+[node name="companion" type="CharacterBody2D" groups=["companions"]]
+z_index = 25
+z_as_relative = false
+y_sort_enabled = true
+collision_layer = 0
+collision_mask = 3
+motion_mode = 1
+script = ExtResource("1_wuydb")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+sprite_frames = SubResource("SpriteFrames_eh516")
+animation = &"sit"
+autoplay = "sit"
+offset = Vector2(0, -6)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_nieyc")
+
+[node name="NavigationAgent2D" type="NavigationAgent2D" parent="."]
+avoidance_enabled = true
+radius = 2.0
+
+[node name="changestate" type="Timer" parent="."]
+wait_time = 20.0
+autostart = true
+
+[node name="TeleportTimer" type="Timer" parent="."]
+wait_time = 3.0
+
+[node name="NavTimer" type="Timer" parent="."]
+wait_time = 0.1
+autostart = true
+
+[node name="particleWaitTimer" type="Timer" parent="."]
+wait_time = 0.75
+one_shot = true
+
+[node name="GPUParticles2D" type="GPUParticles2D" parent="."]
+z_index = 30
+emitting = false
+amount = 32
+process_material = SubResource("ParticleProcessMaterial_7msik")
+texture = ExtResource("3_6aun5")
+one_shot = true
+preprocess = 2.0
+explosiveness = 0.7
+randomness = 1.0
+
+[node name="shadow" parent="." instance=ExtResource("4_vb02r")]
+
+[connection signal="velocity_computed" from="NavigationAgent2D" to="." method="_on_navigation_agent_2d_velocity_computed"]
+[connection signal="timeout" from="changestate" to="." method="_on_changestate_timeout"]
+[connection signal="timeout" from="TeleportTimer" to="." method="_on_teleport_timer_timeout"]
+[connection signal="timeout" from="NavTimer" to="." method="_on_nav_timer_timeout"]
+[connection signal="timeout" from="particleWaitTimer" to="." method="_on_particle_wait_timer_timeout"]
+[connection signal="finished" from="GPUParticles2D" to="." method="_on_gpu_particles_2d_finished"]

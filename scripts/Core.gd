@@ -1,0 +1,1 @@
+class_name Core extends AnimatedSprite2D

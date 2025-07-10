@@ -1,0 +1,24 @@
+[remap]
+
+importer="Aseprite AnimatedSprite2D Import"
+type="PackedScene"
+uid="uid://ddmfiegngxf8y"
+valid=false
+
+[deps]
+
+source_file="res://assets/Chicken_Sprite_Sheet.ase"
+
+[params]
+
+spritesheet/layout=1
+spritesheet/fixed_rows_count=1
+spritesheet/fixed_columns_count=4
+spritesheet/border_type=0
+spritesheet/trim=false
+spritesheet/ignore_empty=true
+spritesheet/merge_duplicates=false
+animation/default/name="default"
+animation/default/direction=0
+animation/default/repeat_count=0
+animation/autoplay=""

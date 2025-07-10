@@ -1,0 +1,83 @@
+[gd_scene load_steps=11 format=3 uid="uid://dksk7ssdnwi23"]
+
+[ext_resource type="Texture2D" uid="uid://dqipstly7gbkq" path="res://assets/CORE.png" id="1_15i82"]
+[ext_resource type="Script" uid="uid://b0rj8ajfrcevm" path="res://scripts/Core.gd" id="2_3teb3"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_hkf0p"]
+atlas = ExtResource("1_15i82")
+region = Rect2(0, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_pa1xs"]
+atlas = ExtResource("1_15i82")
+region = Rect2(32, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_pn5wh"]
+atlas = ExtResource("1_15i82")
+region = Rect2(64, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_m84bg"]
+atlas = ExtResource("1_15i82")
+region = Rect2(96, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_2esw3"]
+atlas = ExtResource("1_15i82")
+region = Rect2(0, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_bxulx"]
+atlas = ExtResource("1_15i82")
+region = Rect2(32, 32, 32, 32)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_ltgcb"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_hkf0p")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_pa1xs")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_pn5wh")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_m84bg")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_2esw3")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_bxulx")
+}],
+"loop": true,
+"name": &"default",
+"speed": 12.0
+}]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_4e2ev"]
+size = Vector2(20, 8)
+
+[node name="StaticBody2D" type="StaticBody2D" groups=["Core"]]
+z_index = 25
+z_as_relative = false
+y_sort_enabled = true
+position = Vector2(0, 10)
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+y_sort_enabled = true
+sprite_frames = SubResource("SpriteFrames_ltgcb")
+autoplay = "default"
+frame_progress = 0.990484
+offset = Vector2(0, -14)
+script = ExtResource("2_3teb3")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -6)
+shape = SubResource("RectangleShape2D_4e2ev")
+
+[node name="NavigationObstacle2D" type="NavigationObstacle2D" parent="."]
+position = Vector2(0, -6)
+scale = Vector2(1, 1.2)
+radius = 1.0
+vertices = PackedVector2Array(13, 4, 13, -4, -13, -4, -13, 4, 13, 4)
+affect_navigation_mesh = true
+carve_navigation_mesh = true
