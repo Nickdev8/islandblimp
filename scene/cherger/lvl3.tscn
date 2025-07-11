@@ -1,13 +1,15 @@
 [gd_scene load_steps=3 format=3 uid="uid://dk44ks6voe1ot"]
 
-[ext_resource type="Script" uid="uid://pqbligwl4mhi" path="res://scene/bot_charger.gd" id="2_r7f10"]
+[ext_resource type="Texture2D" uid="uid://bvyxtvbafnb11" path="res://assets/chargerset.png" id="1_bkqfm"]
+[ext_resource type="Script" uid="uid://pqbligwl4mhi" path="res://scripts/bot_charger.gd" id="2_r7f10"]
 
-[sub_resource type="Resource" id="Resource_mxd15"]
-metadata/__load_path__ = "res://assets/chargerset.aseprite"
+[node name="Node2D" type="Node2D" groups=["Charger"]]
+script = ExtResource("2_r7f10")
+healingspeed = 0.25
 
-[node name="Charger" type="Sprite2D" groups=["Charger"]]
+[node name="Charger" type="Sprite2D" parent="."]
 position = Vector2(0, -1)
-texture = SubResource("Resource_mxd15")
+texture = ExtResource("1_bkqfm")
 offset = Vector2(0, 1)
 region_enabled = true
 region_rect = Rect2(32, 0, 16, 16)

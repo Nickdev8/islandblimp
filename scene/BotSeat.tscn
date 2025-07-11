@@ -2,7 +2,9 @@
 
 [ext_resource type="Texture2D" uid="uid://brgbryjwgy4w5" path="res://assets/tiles_packed.png" id="1_5tykn"]
 
-[node name="Seat" type="Sprite2D" groups=["Seat"]]
+[node name="Node2D" type="Node2D"]
+
+[node name="Seat" type="Sprite2D" parent="." groups=["Seat"]]
 position = Vector2(0, -2)
 texture = ExtResource("1_5tykn")
 offset = Vector2(0, 2)

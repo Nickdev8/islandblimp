@@ -1,8 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://dr72leak5qos7"]
-
-[sub_resource type="Resource" id="Resource_fcdxp"]
-metadata/__load_path__ = "res://assets/shadow.ase"
+[gd_scene format=3 uid="uid://dr72leak5qos7"]
 
 [node name="shadow" type="Sprite2D"]
-texture = SubResource("Resource_fcdxp")
 offset = Vector2(0, -6)

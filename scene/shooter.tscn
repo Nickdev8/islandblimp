@@ -1,8 +1,8 @@
 [gd_scene load_steps=3 format=3 uid="uid://dbrc2mxvhy6hk"]
 
 [ext_resource type="Script" uid="uid://bycikpcid26gq" path="res://scripts/schootscript.gd" id="1_gh8jo"]
-[ext_resource type="Texture2D" uid="uid://d2o7r8bay750y" path="res://assets/76/1.png" id="2_yjy7u"]
+[ext_resource type="PackedScene" uid="uid://bldtdb7x1k1cc" path="res://scene/projectile.tscn" id="2_yjy7u"]
 
 [node name="shooter" type="Node2D"]
 script = ExtResource("1_gh8jo")
-projectile_texture = ExtResource("2_yjy7u")
+projectile_scene = ExtResource("2_yjy7u")

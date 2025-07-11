@@ -143,7 +143,7 @@ func _on_navigation_agent_2d_velocity_computed(safe_velocity: Vector2) -> void:
 
 func _on_teleport_timer_timeout() -> void:
 	if target:
-		position = Vector2(target.position.x, target.position.y +3)
+		global_position = target.global_position + Vector2(0, 3)
 
 func targetlogic() -> void:
 	var group_name
@@ -238,7 +238,7 @@ func checkifstuck():
 		teleport_timer.stop()
 
 func _on_navigation_agent_2d_target_reached() -> void:
-	position = Vector2(target.position.x, target.position.y +3)
+	global_position = target.global_position + Vector2(0, 3)
 	if target.is_in_group("Charger"):
 		if !is_alive:
 			if healing == false:

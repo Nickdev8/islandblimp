@@ -166,14 +166,15 @@ one_shot = true
 z_index = 30
 emitting = false
 amount = 32
-process_material = SubResource("ParticleProcessMaterial_7msik")
 texture = ExtResource("3_6aun5")
 one_shot = true
 preprocess = 2.0
 explosiveness = 0.7
 randomness = 1.0
+process_material = SubResource("ParticleProcessMaterial_7msik")
 
 [node name="shadow" parent="." instance=ExtResource("4_vb02r")]
+texture = null
 
 [connection signal="velocity_computed" from="NavigationAgent2D" to="." method="_on_navigation_agent_2d_velocity_computed"]
 [connection signal="timeout" from="changestate" to="." method="_on_changestate_timeout"]
