@@ -56,13 +56,15 @@ animations = [{
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_4e2ev"]
 size = Vector2(20, 8)
 
-[node name="StaticBody2D" type="StaticBody2D" groups=["Core"]]
+[node name="Node2D" type="Node2D" groups=["Core"]]
 z_index = 25
 z_as_relative = false
 y_sort_enabled = true
+
+[node name="StaticBody2D" type="StaticBody2D" parent="."]
 position = Vector2(0, 10)
 
-[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="StaticBody2D"]
 y_sort_enabled = true
 sprite_frames = SubResource("SpriteFrames_ltgcb")
 autoplay = "default"
@@ -70,13 +72,12 @@ frame_progress = 0.990484
 offset = Vector2(0, -14)
 script = ExtResource("2_3teb3")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D"]
 position = Vector2(0, -6)
 shape = SubResource("RectangleShape2D_4e2ev")
 
-[node name="NavigationObstacle2D" type="NavigationObstacle2D" parent="."]
+[node name="NavigationObstacle2D" type="NavigationObstacle2D" parent="StaticBody2D"]
 position = Vector2(0, -6)
-scale = Vector2(1, 1.2)
 radius = 1.0
 vertices = PackedVector2Array(13, 4, 13, -4, -13, -4, -13, 4, 13, 4)
 affect_navigation_mesh = true

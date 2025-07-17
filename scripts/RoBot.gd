@@ -16,7 +16,7 @@ class_name RoBot extends CharacterBody2D
 @onready var walkanimation: Timer = $walkanimation
 @onready var healtimer: Timer = $Healtimer
 
-@onready var energy_bar: Node2D = $energyBar
+@onready var energy_bar: Control = $energyBar
 @onready var guns: AnimatedSprite2D = $guns
 
 signal health_changed(send_Health: int, send_SNAP_VALUE: int)

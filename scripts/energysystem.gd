@@ -1,67 +1,86 @@
-extends Node2D
+@tool    # optional: run in the editor so you can tweak live
+extends Control
 
-@onready var white: ColorRect = $White
-@onready var red: ColorRect = $Red
-@onready var green: ColorRect = $Green
-@onready var redextra: ColorRect = $Redextra
-@onready var greenextra: ColorRect = $Greenextra
+# ——— the exports now use “: set = …” instead of setget ———
+@export var start_health:   int     = 10  : set = _set_max_health
+@export var current_health: int     = 10  : set = _set_current_health
+@export var offset:         Vector2 = Vector2.ZERO
+@export var padding:        int     = 1
 
-var snapped_value
-var remainder
+var background: ColorRect
+var green_bar:    ColorRect
+var red_bar:      ColorRect
 
 func _ready() -> void:
-	get_parent().connect("health_changed", Callable(self, "setHealthrect"))
-	get_parent().connect("health_start", Callable(self, "startrect"))
+	_create_bar()
+	# initial sizing
+	background.size = Vector2(start_health + padding*2, 1 + padding*2)
+	_update_bar()
+	if get_parent():
+		get_parent().connect("health_start",   Callable(self, "_on_health_start"))
+		get_parent().connect("health_changed", Callable(self, "_on_health_changed"))
 
-func regenarate():
-	print("regenerating")
-	
-func shooting():
-	print("shooting")
-	
-func startrect(starthealth, snapvalue):
-	if starthealth <= snapvalue:
-		red.scale.x = starthealth
-		green.scale.x = starthealth
-		redextra.scale.x = starthealth
-		greenextra.scale.x = starthealth
-		white.scale.x = 2 + starthealth
-		
-		red.position.x = -starthealth / 2 - 0.1
-		green.position.x = -starthealth / 2 - 0.1
-		redextra.position.x = -starthealth / 2 - 0.1
-		greenextra.position.x = -starthealth / 2 - 0.1
-	else:
-		fits_into_fourteen(starthealth, snapvalue)
-		white.scale.x = 2 + snapvalue
-		white.position.x = 0
-		red.scale.x = snapvalue
-		green.scale.x = snapvalue
-		red.scale.y = snapped_value
-		green.scale.y = snapped_value
-		redextra.scale.x = remainder
-		greenextra.scale.x = remainder
-		redextra.position.y = -2 + snapped_value
-		greenextra.position.y = -2 + snapped_value
-		white.scale.y = 3 + snapped_value
-	
-func fits_into_fourteen(StartH: int, SNAP_V: int):
-	if StartH < 0:
-		push_error("WARNING: The function only works with positive integers. Ignoring negative value.")
 
-	snapped_value = StartH / SNAP_V  # Integer division gives the number of times it fits
-	remainder = StartH % SNAP_V  # Modulus gives the remainder
+func _set_max_health(val: int) -> void:
+	# clamp to at least 1px wide
+	start_health = max(val, 1)
+	# resize frame and clamp fill
+	background.size   = Vector2(start_health + padding*2, 1 + padding*2)
+	current_health    = clamp(current_health, 0, start_health)
+	_update_bar()
 
-func setHealthrect(health, snapvalue):
-	if health <= snapvalue:
-		green.scale.x = health
-		green.scale.y = 1
-		greenextra.scale.x = health
-		greenextra.position.y = -2
-	else:
-		fits_into_fourteen(health, snapvalue)
-		
-		green.scale.x = snapvalue
-		green.scale.y = snapped_value
-		greenextra.scale.x = remainder
-		greenextra.position.y = -2 + snapped_value
+
+func _set_current_health(val: int) -> void:
+	current_health = clamp(val, 0, start_health)
+	_update_bar()
+
+
+func _create_bar() -> void:
+	background = ColorRect.new()
+	background.name  = "Background"
+	background.color = Color(0.1, 0.1, 0.1)
+	background.anchor_left   = 0
+	background.anchor_top    = 0
+	background.anchor_right  = 0
+	background.anchor_bottom = 0
+	add_child(background)
+
+	green_bar = ColorRect.new()
+	green_bar.name  = "GreenBar"
+	green_bar.color = Color(0, 1, 0)
+	green_bar.anchor_left   = 0
+	green_bar.anchor_top    = 0
+	green_bar.anchor_right  = 0
+	green_bar.anchor_bottom = 0
+	background.add_child(green_bar)
+
+	red_bar = ColorRect.new()
+	red_bar.name  = "RedBar"
+	red_bar.color = Color(1, 0, 0)
+	red_bar.anchor_left   = 0
+	red_bar.anchor_top    = 0
+	red_bar.anchor_right  = 0
+	red_bar.anchor_bottom = 0
+	background.add_child(red_bar)
+
+
+func _update_bar() -> void:
+	# position the frame so it always has `padding` on all sides
+	background.position = offset - Vector2(padding, padding)
+
+	# size the two 1px-tall bars
+	green_bar.size = Vector2(current_health, 1)
+	red_bar.size   = Vector2(start_health - current_health, 1)
+
+	# and place them inside the padding
+	green_bar.position = Vector2(padding, padding)
+	red_bar.position   = Vector2(padding + current_health, padding)
+
+
+# Optional signal handlers, if your parent still emits these:
+func _on_health_start(new_max: float, snap_val: float) -> void:
+	_set_max_health(int(new_max))
+	_set_current_health(int(new_max))
+
+func _on_health_changed(new_health: float, snap_val: float) -> void:
+	_set_current_health(int(new_health))

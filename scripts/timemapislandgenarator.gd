@@ -1,28 +1,30 @@
 extends Node2D
 
-# Properties
-@export var tileSize = Vector2(16, 16)     # Size of each tile in pixels
-@export var threshold = 0.2                # Threshold for determining tile placement
-@export var mounten_threshold = 0.8                # Threshold for determining tile placement
-@export var grass_threshold = 0.5
-@export var shortgrass_threshold = 0.5
-@export var rocks_threshold = 0.5
-@export var hillsize: Vector2i = Vector2i(5, 5)
-@export var hillamount: int
-@export var grasschance: int
+# Tile Properties
+@export var tile_size: Vector2 = Vector2(16, 16)     # Size of each tile in pixels
+@export var terrain_threshold: float = 0.2          # Threshold for determining tile placement
+@export var mountain_threshold: float = 0.8         # Threshold for mountain placement
+@export var grass_threshold: float = 0.5            # Threshold for grass placement
+@export var short_grass_threshold: float = 0.5      # Threshold for short grass
+@export var rocks_threshold: float = 0.5            # Threshold for rocks
+@export var hill_size: Vector2i = Vector2i(5, 5)    # Size of hills
+@export var hill_count: int = 5                     # Number of hills to generate
+@export var grass_spawn_chance: int = 10            # Chance for grass to spawn (1 in X)
 
-@onready var bot_items: TileMapLayer = %BotItems
-@onready var hill: TileMapLayer = %hill
-@onready var stuff_on_ground: TileMapLayer = %stuffOnGround
-@onready var grassLayer: TileMapLayer = $grass
-@onready var underside: TileMapLayer = %underside
+# Layer References
+@onready var bottom_items_layer: TileMapLayer = %BotItems
+@onready var hill_layer: TileMapLayer = %hill
+@onready var ground_decoration_layer: TileMapLayer = %stuffOnGround
+@onready var grass_layer: TileMapLayer = $grass
+@onready var underside_layer: TileMapLayer = %underside
 
-var coretilemapposision: Vector2i = Vector2i.ZERO
-var postoset: Array[Vector2i] = []
-var postoid: Array[int] = []
-var postonull: Array[Vector2i] = []
+# Generation State
+var core_tile_position: Vector2i = Vector2i.ZERO
+var positions_to_set: Array[Vector2i] = []
+var positions_id: Array[int] = []
+var positions_to_null: Array[Vector2i] = []
 
-const Dic: Dictionary = {
+const TILE_ATLAS: Dictionary = {
 	"null" : Vector2i(-1, -1),
 	
 	"stone1" : Vector2i(8, 7),
@@ -31,7 +33,6 @@ const Dic: Dictionary = {
 	"shroom2" : Vector2i(10, 7),
 	"stumpl" : Vector2i(11, 7),
 	"stumpr" : Vector2i(12, 7),
-	
 	
 	"grass_collision_all" : Vector2i(21, 1),
 	"grass_collision_navigation" : Vector2i(19, 2),
@@ -88,542 +89,428 @@ const Dic: Dictionary = {
 	"hill_pilar_Center" : Vector2i(6, 7),
 }
 
-const noiseParameters = {
+const NOISE_PARAMETERS = {
 	"noise_type": 0,
-	"frequency": 0.008000,
+	"frequency": 0.008,
 	"domain_warp_enabled": true,
-	"domain_warp_amplitude": 15.010000,
-	"domain_warp_fractal_gain": 0.500000,
+	"domain_warp_amplitude": 15.01,
+	"domain_warp_fractal_gain": 0.5,
 	"domain_warp_fractal_type": 1,
-	"domain_warp_frequency": 0.020000,
-	"domain_warp_fractal_octaves": 3.000000,
+	"domain_warp_frequency": 0.02,
+	"domain_warp_fractal_octaves": 3.0,
 	"domain_warp_type": 0,
 	"fractal_type": 1,
-	"fractal_gain": 0.500000,
-	"fractal_lacunarity": 2.120000,
-	"fractal_octaves": 3.000000,
-	"fractal_ping_pong_strength": 2.000000,
-	"fractal_weighted_strength": 0.500000,
+	"fractal_gain": 0.5,
+	"fractal_lacunarity": 2.12,
+	"fractal_octaves": 3.0,
+	"fractal_ping_pong_strength": 2.0,
+	"fractal_weighted_strength": 0.5,
 	"cellular_distance_function": 2,
-	"cellular_jitter": 0.450000,
+	"cellular_jitter": 0.45,
 	"cellular_return_type": 1,
 }
 
 func _ready():
-	generate_map()
+	generate_map_with_timeout()
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("jump"):
+		generate_map_with_timeout()
+
+func generate_map_with_timeout():
+	var start_time = Time.get_ticks_msec()
+	var success = false
+	
+	while not success:
+		# Clear previous generation attempt
+		bottom_items_layer.clear()
+		hill_layer.clear()
+		ground_decoration_layer.clear()
+		grass_layer.clear()
+		underside_layer.clear()
+		
+		core_tile_position = Vector2i.ZERO
+		positions_to_set = []
+		positions_id = []
+		positions_to_null = []
+		
+		# Attempt generation
 		generate_map()
+		
+		# Check if generation took too long
+		if Time.get_ticks_msec() - start_time < 500:
+			success = true
+		else:
+			print("Generation took too long, retrying...")
 
 func generate_map():
-	if grassLayer == null:
-		printerr("TileMap node reference is not set!")
-		return
-	
-	bot_items.clear()
-	hill.clear()
-	stuff_on_ground.clear()
-	grassLayer.clear()
-	underside.clear()
-	
-	coretilemapposision = Vector2i.ZERO
-	postoset = []
-	postoid = []
-	postonull = []
-	
 	var noise = create_noise(randf_range(1, 10000000))
 	var grass_noise = create_noise(randf_range(1, 10000000))
 	
-	var seed = randf_range(1, 10000000)
-	noise.seed = seed
-	grass_noise.seed = seed
-	noise.set_noise_type(noiseParameters["noise_type"])
-	grass_noise.set_noise_type(noiseParameters["noise_type"])
-	noise.set_frequency(noiseParameters["frequency"])
-	noise.domain_warp_enabled = noiseParameters["domain_warp_enabled"]
-	grass_noise.domain_warp_enabled = noiseParameters["domain_warp_enabled"]
-	noise.domain_warp_amplitude = noiseParameters["domain_warp_amplitude"]
-	grass_noise.domain_warp_amplitude = noiseParameters["domain_warp_amplitude"]
-	noise.domain_warp_fractal_gain = noiseParameters["domain_warp_fractal_gain"]
-	grass_noise.domain_warp_fractal_gain = noiseParameters["domain_warp_fractal_gain"]
-	noise.domain_warp_fractal_type = noiseParameters["domain_warp_fractal_type"]
-	grass_noise.domain_warp_fractal_type = noiseParameters["domain_warp_fractal_type"]
-	noise.domain_warp_frequency = noiseParameters["domain_warp_frequency"]
-	grass_noise.domain_warp_frequency = noiseParameters["domain_warp_frequency"]
-	noise.domain_warp_fractal_octaves = noiseParameters["domain_warp_fractal_octaves"]
-	grass_noise.domain_warp_fractal_octaves = noiseParameters["domain_warp_fractal_octaves"]
-	noise.domain_warp_type = noiseParameters["domain_warp_type"]
-	grass_noise.domain_warp_type = noiseParameters["domain_warp_type"]
-	noise.fractal_type = noiseParameters["fractal_type"]
-	grass_noise.fractal_type = noiseParameters["fractal_type"]
-	noise.fractal_gain = noiseParameters["fractal_gain"]
-	grass_noise.fractal_gain = noiseParameters["fractal_gain"]
-	noise.fractal_lacunarity = noiseParameters["fractal_lacunarity"]
-	grass_noise.fractal_lacunarity = noiseParameters["fractal_lacunarity"]
-	noise.fractal_octaves = noiseParameters["fractal_octaves"]
-	grass_noise.fractal_octaves = noiseParameters["fractal_octaves"]
-	noise.fractal_ping_pong_strength = noiseParameters["fractal_ping_pong_strength"]
-	grass_noise.fractal_ping_pong_strength = noiseParameters["fractal_ping_pong_strength"]
-	noise.fractal_weighted_strength = noiseParameters["fractal_weighted_strength"]
-	grass_noise.fractal_weighted_strength = noiseParameters["fractal_weighted_strength"]
-	noise.cellular_distance_function = noiseParameters["cellular_distance_function"]
-	grass_noise.cellular_distance_function = noiseParameters["cellular_distance_function"]
-	noise.cellular_jitter = noiseParameters["cellular_jitter"]
-	grass_noise.cellular_jitter = noiseParameters["cellular_jitter"]
-	noise.cellular_return_type = noiseParameters["cellular_return_type"]
-	grass_noise.cellular_return_type = noiseParameters["cellular_return_type"]
+	var seed_value = randf_range(1, 10000000)
+	noise.seed = seed_value
+	grass_noise.seed = seed_value
+	
+	configure_noise(noise)
+	configure_noise(grass_noise)
 	
 	var highest_point = find_highest_point(noise)
 	var center_offset = Vector2i(Global.islandSize.x / 2, Global.islandSize.y / 2)
 	var displacement = highest_point - center_offset
 	
+	# Generate base terrain
 	for x in range(Global.islandSize.x):
 		for y in range(Global.islandSize.y):
 			var noise_value = noise.get_noise_2d(x + displacement.x, y + displacement.y)
-			var distance = distance_between_points(Vector2i(x,y), center_offset)
+			var distance = distance_between_points(Vector2i(x, y), center_offset)
 			
-			if noise_value * distance > threshold:
-				grassLayer.set_cell(Vector2i(x - center_offset.x, y - center_offset.x), 0, Dic["grass"])
+			if noise_value * distance > terrain_threshold:
+				grass_layer.set_cell(Vector2i(x - center_offset.x, y - center_offset.x), 0, TILE_ATLAS["grass"])
 	
-	secondlayerfilter()
+	apply_second_layer_filters()
 	
-	var randomcorenum = randi_range(0, hillamount -1)
-	for t in hillamount:
-		var istherehill = false
-		while istherehill == false:
-			istherehill = genaratehill(t, hillamount, randomcorenum)
+	var random_core_num = randi_range(0, hill_count - 1)
+	for hill_index in hill_count:
+		var hill_placed = false
+		while not hill_placed:
+			hill_placed = generate_hill(hill_index, hill_count, random_core_num)
 	
-	hillsecondlayerfilter()
+	apply_hill_filters()
+	generate_grass_variations(grass_noise, center_offset)
+	apply_collision_filters()
 	
-	makegrassrandom(grass_noise, center_offset)
-	collsionlayerfilter()
+	# Generate scenes/objects
+	generate_scene(1)  # Computer
+	for i in 4: generate_scene(2)  # Seats
+	for i in 5: generate_scene(4 + i)  # Chargers
+	for i in 4: generate_scene(4)  # Companions
 	
-	#computer
-	generate_scene(1)
-	#seat
-	generate_scene(2)
-	generate_scene(2)
-	generate_scene(2)
-	generate_scene(2)
-	#charger
-	generate_scene(5)
-	generate_scene(6)
-	generate_scene(7)
-	generate_scene(8)
-	generate_scene(9)
+	# Place core
+	bottom_items_layer.set_cell(core_tile_position, 1, Vector2i.ZERO, 3)
 	
-	#companion
-	generate_scene(4)
-	generate_scene(4)
-	generate_scene(4)
-	generate_scene(4)
-	
-	#core
-	bot_items.set_cell(coretilemapposision, 1, Vector2i.ZERO, 3)
-	
-	for i in range(postoset.size()):
-		bot_items.set_cell(postoset[i], 1, Vector2i.ZERO, postoid[i])
-		stuff_on_ground.set_cell(postonull[i], 0, Dic["null"])
-	
-func create_noise(seed: int) -> FastNoiseLite:
+	# Place all other items
+	for i in range(positions_to_set.size()):
+		bottom_items_layer.set_cell(positions_to_set[i], 1, Vector2i.ZERO, positions_id[i])
+		ground_decoration_layer.set_cell(positions_to_null[i], 0, TILE_ATLAS["null"])
+
+func create_noise(seed_value: int) -> FastNoiseLite:
 	var noise = FastNoiseLite.new()
-	noise.seed = seed
-	noise.set_noise_type(noiseParameters["noise_type"])
-	noise.set_frequency(noiseParameters["frequency"])
-	noise.domain_warp_enabled = noiseParameters["domain_warp_enabled"]
-	noise.domain_warp_amplitude = noiseParameters["domain_warp_amplitude"]
-	noise.domain_warp_fractal_gain = noiseParameters["domain_warp_fractal_gain"]
-	noise.domain_warp_fractal_type = noiseParameters["domain_warp_fractal_type"]
-	noise.domain_warp_frequency = noiseParameters["domain_warp_frequency"]
-	noise.domain_warp_fractal_octaves = noiseParameters["domain_warp_fractal_octaves"]
-	noise.domain_warp_type = noiseParameters["domain_warp_type"]
-	noise.fractal_type = noiseParameters["fractal_type"]
-	noise.fractal_gain = noiseParameters["fractal_gain"]
-	noise.fractal_lacunarity = noiseParameters["fractal_lacunarity"]
-	noise.fractal_octaves = noiseParameters["fractal_octaves"]
-	noise.fractal_ping_pong_strength = noiseParameters["fractal_ping_pong_strength"]
-	noise.fractal_weighted_strength = noiseParameters["fractal_weighted_strength"]
-	noise.cellular_distance_function = noiseParameters["cellular_distance_function"]
-	noise.cellular_jitter = noiseParameters["cellular_jitter"]
-	noise.cellular_return_type = noiseParameters["cellular_return_type"]
+	noise.seed = seed_value
 	return noise
-	
-func makegrassrandom(grass_noise, center_offset):
+
+func configure_noise(noise: FastNoiseLite) -> void:
+	noise.set_noise_type(NOISE_PARAMETERS["noise_type"])
+	noise.set_frequency(NOISE_PARAMETERS["frequency"])
+	noise.domain_warp_enabled = NOISE_PARAMETERS["domain_warp_enabled"]
+	noise.domain_warp_amplitude = NOISE_PARAMETERS["domain_warp_amplitude"]
+	noise.domain_warp_fractal_gain = NOISE_PARAMETERS["domain_warp_fractal_gain"]
+	noise.domain_warp_fractal_type = NOISE_PARAMETERS["domain_warp_fractal_type"]
+	noise.domain_warp_frequency = NOISE_PARAMETERS["domain_warp_frequency"]
+	noise.domain_warp_fractal_octaves = NOISE_PARAMETERS["domain_warp_fractal_octaves"]
+	noise.domain_warp_type = NOISE_PARAMETERS["domain_warp_type"]
+	noise.fractal_type = NOISE_PARAMETERS["fractal_type"]
+	noise.fractal_gain = NOISE_PARAMETERS["fractal_gain"]
+	noise.fractal_lacunarity = NOISE_PARAMETERS["fractal_lacunarity"]
+	noise.fractal_octaves = NOISE_PARAMETERS["fractal_octaves"]
+	noise.fractal_ping_pong_strength = NOISE_PARAMETERS["fractal_ping_pong_strength"]
+	noise.fractal_weighted_strength = NOISE_PARAMETERS["fractal_weighted_strength"]
+	noise.cellular_distance_function = NOISE_PARAMETERS["cellular_distance_function"]
+	noise.cellular_jitter = NOISE_PARAMETERS["cellular_jitter"]
+	noise.cellular_return_type = NOISE_PARAMETERS["cellular_return_type"]
+
+func generate_grass_variations(grass_noise: FastNoiseLite, center_offset: Vector2i):
 	for x in range(Global.islandSize.x):
 		for y in range(Global.islandSize.y):
 			grass_noise.set_frequency(0.06)
 			var noise_value = grass_noise.get_noise_2d(x + 1000, y)
 			grass_noise.set_frequency(0.08)
-			var noise_value_shortgrass = grass_noise.get_noise_2d(x + 2000, y)
-			var setcell = Vector2i(x - Global.islandSize.x/2,y - Global.islandSize.y/2)
-			var setcell_left = Vector2i(x - Global.islandSize.x/2 - 1,y - Global.islandSize.y/2)
-			var me = grassLayer.get_cell_atlas_coords(setcell)
-			var left = grassLayer.get_cell_atlas_coords(setcell_left)
-			var me_stuff = stuff_on_ground.get_cell_atlas_coords(setcell)
-			var left_stuff = stuff_on_ground.get_cell_atlas_coords(setcell_left)
-			#var randomnormalgrasschange: int = randi_range(1,grasschance)
+			var short_grass_noise_value = grass_noise.get_noise_2d(x + 2000, y)
 			
-			if me == Dic["grass"]:
-					if noise_value > grass_threshold:
-						var randomgrass: int = randi_range(1,3)
-						if randomgrass == 1: stuff_on_ground.set_cell(Vector2i(x - center_offset.x, y - center_offset.x), 0, Dic["packedgrass1"])
-						elif randomgrass == 2: stuff_on_ground.set_cell(Vector2i(x - center_offset.x, y - center_offset.x), 0, Dic["packedgrass2"])
-						elif randomgrass == 3: stuff_on_ground.set_cell(Vector2i(x - center_offset.x, y - center_offset.x), 0, Dic["packedgrass3"])
-					elif noise_value_shortgrass > shortgrass_threshold and noise_value_shortgrass < rocks_threshold:
-						var randomgrass: int = randi_range(1,3)
-						if randomgrass == 1: stuff_on_ground.set_cell(Vector2i(x - center_offset.x, y - center_offset.x), 0, Dic["grass1"])
-						elif randomgrass == 2: stuff_on_ground.set_cell(Vector2i(x - center_offset.x, y - center_offset.x), 0, Dic["grass2"])
-						elif randomgrass == 3: stuff_on_ground.set_cell(Vector2i(x - center_offset.x, y - center_offset.x), 0, Dic["grass3"])
-					elif noise_value_shortgrass > rocks_threshold:
-						var randomgrass: int = randi_range(1,5)
-						if randomgrass == 1: stuff_on_ground.set_cell(Vector2i(x - center_offset.x, y - center_offset.x), 0, Dic["stone1"])
-						elif randomgrass == 2: stuff_on_ground.set_cell(Vector2i(x - center_offset.x, y - center_offset.x), 0, Dic["stone2"])
-						elif randomgrass == 3: stuff_on_ground.set_cell(Vector2i(x - center_offset.x, y - center_offset.x), 0, Dic["shroom1"])
-						elif randomgrass == 4: stuff_on_ground.set_cell(Vector2i(x - center_offset.x, y - center_offset.x), 0, Dic["shroom2"])
-						elif randomgrass == 5:
-							if left == Dic["grass"] and me_stuff != Dic["stumpl"] and me_stuff != Dic["stumpr"] and left_stuff != Dic["stumpl"] and left_stuff != Dic["stumpr"]:
-								stuff_on_ground.set_cell(Vector2i(x - center_offset.x - 1, y - center_offset.x), 0, Dic["stumpl"])
-								stuff_on_ground.set_cell(Vector2i(x - center_offset.x, y - center_offset.x), 0, Dic["stumpr"])
-							else: stuff_on_ground.set_cell(Vector2i(x - center_offset.x, y - center_offset.x), 0, Dic["stone2"])
+			var set_cell = Vector2i(x - Global.islandSize.x/2, y - Global.islandSize.y/2)
+			var set_cell_left = Vector2i(x - Global.islandSize.x/2 - 1, y - Global.islandSize.y/2)
+			
+			var me = grass_layer.get_cell_atlas_coords(set_cell)
+			var left = grass_layer.get_cell_atlas_coords(set_cell_left)
+			var me_stuff = ground_decoration_layer.get_cell_atlas_coords(set_cell)
+			var left_stuff = ground_decoration_layer.get_cell_atlas_coords(set_cell_left)
+			
+			if me == TILE_ATLAS["grass"]:
+				if noise_value > grass_threshold:
+					var random_grass = randi_range(1, 3)
+					ground_decoration_layer.set_cell(set_cell, 0, TILE_ATLAS["packedgrass" + str(random_grass)])
+				elif short_grass_noise_value > short_grass_threshold and short_grass_noise_value < rocks_threshold:
+					var random_grass = randi_range(1, 3)
+					ground_decoration_layer.set_cell(set_cell, 0, TILE_ATLAS["grass" + str(random_grass)])
+				elif short_grass_noise_value > rocks_threshold:
+					var random_item = randi_range(1, 5)
+					match random_item:
+						1: ground_decoration_layer.set_cell(set_cell, 0, TILE_ATLAS["stone1"])
+						2: ground_decoration_layer.set_cell(set_cell, 0, TILE_ATLAS["stone2"])
+						3: ground_decoration_layer.set_cell(set_cell, 0, TILE_ATLAS["shroom1"])
+						4: ground_decoration_layer.set_cell(set_cell, 0, TILE_ATLAS["shroom2"])
+						5:
+							if left == TILE_ATLAS["grass"] and me_stuff != TILE_ATLAS["stumpl"] and me_stuff != TILE_ATLAS["stumpr"] and left_stuff != TILE_ATLAS["stumpl"] and left_stuff != TILE_ATLAS["stumpr"]:
+								ground_decoration_layer.set_cell(set_cell_left, 0, TILE_ATLAS["stumpl"])
+								ground_decoration_layer.set_cell(set_cell, 0, TILE_ATLAS["stumpr"])
+							else:
+								ground_decoration_layer.set_cell(set_cell, 0, TILE_ATLAS["stone2"])
 
-func generate_scene(sceneid: int):
-	var istherea = false
-	while istherea == false:
+func generate_scene(scene_id: int):
+	var placed = false
+	while not placed:
 		var x = randi_range(0, Global.islandSize.x)
 		var y = randi_range(0, Global.islandSize.y)
-		var all_is_on_grass: bool = false
-
 		var base_pos = Vector2i(x - Global.islandSize.x / 2, y - Global.islandSize.y / 2)
-		var positions = [
-			base_pos + Vector2i(-1, -1), base_pos + Vector2i(0, -1), base_pos + Vector2i(1, -1), base_pos + Vector2i(2, -1),
-			base_pos + Vector2i(-1, 0),  base_pos + Vector2i(0, 0),  base_pos + Vector2i(1, 0),  base_pos + Vector2i(2, 0),
-			base_pos + Vector2i(-1, 1),  base_pos + Vector2i(0, 1),  base_pos + Vector2i(1, 1),  base_pos + Vector2i(2, 1),
-			base_pos + Vector2i(-1, 2),  base_pos + Vector2i(0, 2),  base_pos + Vector2i(1, 2),  base_pos + Vector2i(2, 2)
-		]
-
-		var grass_cell_data = []
-		var botitems_cell_data = []
-		var stuffonground_cell_data = []
-		var hill_cell_data = []
-		for pos in positions:
-			grass_cell_data.append(grassLayer.get_cell_atlas_coords(pos))
-			botitems_cell_data.append(bot_items.get_cell_atlas_coords(pos))
-			stuffonground_cell_data.append(stuff_on_ground.get_cell_atlas_coords(pos))
-			hill_cell_data.append(hill.get_cell_atlas_coords(pos))
 		
-		var collision_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-		var navigation_indices = collision_indices
+		var positions = []
+		for dy in range(-1, 3):
+			for dx in range(-1, 3):
+				positions.append(base_pos + Vector2i(dx, dy))
+		
+		var valid_position = true
+		
+		# Check all positions are valid
+		for pos in positions:
+			if (grass_layer.get_cell_atlas_coords(pos) != TILE_ATLAS["grass"] or
+				bottom_items_layer.get_cell_atlas_coords(pos) != TILE_ATLAS["null"] or
+				ground_decoration_layer.get_cell_atlas_coords(pos) != TILE_ATLAS["null"] or
+				hill_layer.get_cell_atlas_coords(pos) != TILE_ATLAS["null"]):
+				valid_position = false
+				break
+		
+		if valid_position:
+			bottom_items_layer.set_cell(base_pos, 1, Vector2i.ZERO, scene_id)
+			ground_decoration_layer.set_cell(base_pos, 0, TILE_ATLAS["null"])
+			positions_to_set.append(base_pos)
+			positions_id.append(scene_id)
+			positions_to_null.append(base_pos)
+			
+			# Add surrounding positions to null list
+			for dy in range(0, 2):
+				for dx in range(0, 2):
+					positions_to_null.append(base_pos + Vector2i(dx, dy))
+			
+			placed = true
 
-		if grass_cell_data[5] == Dic["grass"]:
-			var is_valid = true
-			for idx in collision_indices:
-				if grass_cell_data[idx] == Dic["grass_collision_all"]:
-					is_valid = false
-					break
-
-			if is_valid:
-				for idx in navigation_indices:
-					if grass_cell_data[idx] == Dic["grass_collision_navigation"]:
-						is_valid = false
-						break
-
-			if is_valid:
-				for idx in navigation_indices:
-					if botitems_cell_data[idx] != Dic["null"]:
-						is_valid = false
-						break
-
-			if is_valid:
-				for idx in navigation_indices:
-					if stuffonground_cell_data[idx] != Dic["null"]:
-						is_valid = false
-						break
-
-			if is_valid:
-				for idx in navigation_indices:
-					if hill_cell_data[idx] != Dic["null"]:
-						is_valid = false
-						break
-
-			if is_valid:
-				for idx in navigation_indices:
-					if grass_cell_data[idx] != Dic["grass"]:
-						is_valid = false
-						break
-
-			if is_valid:
-				bot_items.set_cell(base_pos, 1, Vector2i.ZERO, sceneid)
-				stuff_on_ground.set_cell(base_pos, 0, Dic["null"])
-				postoset.append(base_pos)
-				postoid.append(sceneid)
-				postonull.append(base_pos)
-				postonull.append(base_pos + Vector2i(0, 1))
-				postonull.append(base_pos + Vector2i(1, 0))
-				postonull.append(base_pos + Vector2i(1, 1))
-				bot_items.set_cell(base_pos, 1, Vector2i.ZERO, sceneid)
-				stuff_on_ground.set_cell(base_pos, 0, Dic["null"])
-				istherea = true
-
-func genaratehill(i, i_tot, i_random) -> bool:
+func generate_hill(hill_index: int, total_hills: int, random_core_num: int) -> bool:
 	var x_pos = randi_range(0, Global.islandSize.x)
 	var y_pos = randi_range(0, Global.islandSize.y)
-	var allisongrass: bool = true
-	var hillposisions: Array[Vector2i]
-	var temp_corepos: Vector2i = Vector2i.ZERO
+	var all_on_grass = true
+	var hill_positions: Array[Vector2i] = []
+	var temp_core_pos: Vector2i = Vector2i.ZERO
 	
-	hillposisions.clear()
+	for x in hill_size.x:
+		for y in hill_size.y:
+			var set_cell = Vector2i(x_pos + x - Global.islandSize.x/2, y_pos + y - Global.islandSize.y/2)
+			var set_cell_up = Vector2i(x_pos + x - Global.islandSize.x/2, y_pos + y - Global.islandSize.y/2 - 1)
+			var set_cell_down = Vector2i(x_pos + x - Global.islandSize.x/2, y_pos + y - Global.islandSize.y/2 + 1)
+			var set_cell_left = Vector2i(x_pos + x - Global.islandSize.x/2 - 1, y_pos + y - Global.islandSize.y/2)
+			var set_cell_right = Vector2i(x_pos + x - Global.islandSize.x/2 + 1, y_pos + y - Global.islandSize.y/2)
+			
+			var me = grass_layer.get_cell_atlas_coords(set_cell)
+			var up = grass_layer.get_cell_atlas_coords(set_cell_up)
+			var down = grass_layer.get_cell_atlas_coords(set_cell_down)
+			var left = grass_layer.get_cell_atlas_coords(set_cell_left)
+			var right = grass_layer.get_cell_atlas_coords(set_cell_right)
+			
+			# Skip if position is invalid
+			if set_cell in [Vector2i(0,0), Vector2i(1,0), Vector2i(1,1), Vector2i(0,1), Vector2i(-1,-1), Vector2i(-1,0), Vector2i(0,-1), Vector2i(1,-1), Vector2i(-1,1)]:
+				all_on_grass = false
+				continue
+			
+			if is_grass(me) and is_grass(up) and is_grass(down) and is_grass(left) and is_grass(right):
+				hill_positions.append(set_cell)
+				if hill_index == random_core_num and x == 2 and y == 2:
+					temp_core_pos = set_cell
+			else:
+				all_on_grass = false
 	
-	if true:
-		for x in hillsize.x:
-			for y in hillsize.y:
-				var setcell = Vector2i(x_pos + x - Global.islandSize.x/2, y_pos + y - Global.islandSize.y/2)
-				var setcell_up = Vector2i(x_pos + x - Global.islandSize.x/2, y_pos + y - Global.islandSize.y/2 - 1)
-				var setcell_down = Vector2i(x_pos + x - Global.islandSize.x/2, y_pos + y - Global.islandSize.y/2 + 1)
-				var setcell_left = Vector2i(x_pos + x - Global.islandSize.x/2 - 1, y_pos + y - Global.islandSize.y/2)
-				var setcell_right = Vector2i(x_pos + x - Global.islandSize.x/2 + 1, y_pos + y - Global.islandSize.y/2)
-				var me = grassLayer.get_cell_atlas_coords(setcell)
-				var up = grassLayer.get_cell_atlas_coords(setcell_up)
-				var down = grassLayer.get_cell_atlas_coords(setcell_down)
-				var left = grassLayer.get_cell_atlas_coords(setcell_left)
-				var right = grassLayer.get_cell_atlas_coords(setcell_right)
-				
-				if setcell != Vector2i(0,0) and setcell != Vector2i(1,0) and setcell != Vector2i(1,1) and setcell != Vector2i(0,1) and setcell != Vector2i(-1,-1) and setcell != Vector2i(-1, 0) and setcell != Vector2i(0, -1) and setcell != Vector2i(1, -1) and setcell != Vector2i(-1, 1):
-					if isgrass(me) and isgrass(up) and isgrass(down) and isgrass(left) and isgrass(right):
-						hillposisions.append(setcell)
-						if i == i_random:
-							if x == 2 && y == 2:
-								temp_corepos = setcell
-							 
-					else: allisongrass = false
-				else: allisongrass = false
+	if all_on_grass:
+		if temp_core_pos != Vector2i.ZERO:
+			core_tile_position = temp_core_pos
+		for pos in hill_positions:
+			hill_layer.set_cell(pos, 0, TILE_ATLAS["hill"])
 	
-	if allisongrass == true:
-		if temp_corepos != Vector2i.ZERO:
-			coretilemapposision = temp_corepos
-		for pos in hillposisions:
-			hill.set_cell(pos, 0, Dic["hill"])
-
-	return allisongrass
+	return all_on_grass
 
 func find_highest_point(noise: FastNoiseLite) -> Vector2i:
-	var highest_noise_value = -INF
+	var highest_noise = -INF
 	var highest_point: Vector2i
 	
 	for x in range(Global.islandSize.x):
 		for y in range(Global.islandSize.y):
 			var noise_value = noise.get_noise_2d(x, y)
-			if noise_value > highest_noise_value:
-				highest_noise_value = noise_value
+			if noise_value > highest_noise:
+				highest_noise = noise_value
 				highest_point = Vector2i(x, y)
 	
 	return highest_point
 
-func distance_between_points(vectori: Vector2, center_offset: Vector2) -> float:
-	var max_distance = 40.0  # Maximum distance to scale against
-	var distance = vectori.distance_to(center_offset)
+func distance_between_points(point: Vector2, center: Vector2) -> float:
+	var max_distance = 40.0
+	var distance = point.distance_to(center)
+	return 1.0 - clamp(distance / max_distance, 0.0, 1.0)
 
-	# Scale the distance between 0 and 1
-	var scaled_distance = 1.0 - clamp(distance / max_distance, 0.0, 1.0)
-
-	return scaled_distance
-
-func secondlayerfilter():
+func apply_second_layer_filters():
 	for x in range(Global.islandSize.x):
 		for y in range(Global.islandSize.y):
-			var setcell = Vector2i(x - Global.islandSize.x/2, y - Global.islandSize.y/2)
-			var setcell_up = Vector2i(x - Global.islandSize.x/2, y - Global.islandSize.y/2 - 1)
-			var setcell_up_left = Vector2i(x - Global.islandSize.x/2 - 1, y - Global.islandSize.y/2 - 1)
-			var setcell_up_right = Vector2i(x - Global.islandSize.x/2 + 1, y - Global.islandSize.y/2 - 1)
-			var setcell_down = Vector2i(x - Global.islandSize.x/2, y - Global.islandSize.y/2 + 1)
-			var setcell_down_left = Vector2i(x - Global.islandSize.x/2 - 1, y - Global.islandSize.y/2 + 1)
-			var setcell_down_right = Vector2i(x - Global.islandSize.x/2 + 1, y - Global.islandSize.y/2 + 1)
-			var setcell_left = Vector2i(x - Global.islandSize.x/2 - 1, y - Global.islandSize.y/2)
-			var setcell_right = Vector2i(x - Global.islandSize.x/2 + 1, y - Global.islandSize.y/2)
-			var me = grassLayer.get_cell_atlas_coords(setcell)
-			var up = grassLayer.get_cell_atlas_coords(setcell_up)
-			var up_left = grassLayer.get_cell_atlas_coords(setcell_up_left)
-			var up_right = grassLayer.get_cell_atlas_coords(setcell_up_right)
-			var down = grassLayer.get_cell_atlas_coords(setcell_down)
-			var down_left = grassLayer.get_cell_atlas_coords(setcell_down_left)
-			var down_right = grassLayer.get_cell_atlas_coords(setcell_down_right)
-			var left = grassLayer.get_cell_atlas_coords(setcell_left)
-			var right = grassLayer.get_cell_atlas_coords(setcell_right)
+			var set_cell = Vector2i(x - Global.islandSize.x/2, y - Global.islandSize.y/2)
+			var set_cell_up = Vector2i(x - Global.islandSize.x/2, y - Global.islandSize.y/2 - 1)
+			var set_cell_up_left = Vector2i(x - Global.islandSize.x/2 - 1, y - Global.islandSize.y/2 - 1)
+			var set_cell_up_right = Vector2i(x - Global.islandSize.x/2 + 1, y - Global.islandSize.y/2 - 1)
+			var set_cell_down = Vector2i(x - Global.islandSize.x/2, y - Global.islandSize.y/2 + 1)
+			var set_cell_down_left = Vector2i(x - Global.islandSize.x/2 - 1, y - Global.islandSize.y/2 + 1)
+			var set_cell_down_right = Vector2i(x - Global.islandSize.x/2 + 1, y - Global.islandSize.y/2 + 1)
+			var set_cell_left = Vector2i(x - Global.islandSize.x/2 - 1, y - Global.islandSize.y/2)
+			var set_cell_right = Vector2i(x - Global.islandSize.x/2 + 1, y - Global.islandSize.y/2)
 			
-			var underside_up = underside.get_cell_atlas_coords(setcell_up)
+			var me = grass_layer.get_cell_atlas_coords(set_cell)
+			var up = grass_layer.get_cell_atlas_coords(set_cell_up)
+			var up_left = grass_layer.get_cell_atlas_coords(set_cell_up_left)
+			var up_right = grass_layer.get_cell_atlas_coords(set_cell_up_right)
+			var down = grass_layer.get_cell_atlas_coords(set_cell_down)
+			var down_left = grass_layer.get_cell_atlas_coords(set_cell_down_left)
+			var down_right = grass_layer.get_cell_atlas_coords(set_cell_down_right)
+			var left = grass_layer.get_cell_atlas_coords(set_cell_left)
+			var right = grass_layer.get_cell_atlas_coords(set_cell_right)
 			
+			var underside_up = underside_layer.get_cell_atlas_coords(set_cell_up)
+			
+			if is_grass(me):
+				if is_null(left) or is_null(right) or is_null(up) or is_null(down):
+					if not is_null(left) and not is_null(right) and is_null(up) and not is_null(down):
+						grass_layer.set_cell(set_cell, 0, TILE_ATLAS["grass_Top"])
+					elif not is_null(left) and not is_null(right) and not is_null(up) and is_null(down):
+						grass_layer.set_cell(set_cell, 0, TILE_ATLAS["grass_Bottom"])
+					elif is_null(left) and not is_null(right) and not is_null(up) and not is_null(down):
+						grass_layer.set_cell(set_cell, 0, TILE_ATLAS["grass_Left"])
+					elif not is_null(left) and is_null(right) and not is_null(up) and not is_null(down):
+						grass_layer.set_cell(set_cell, 0, TILE_ATLAS["grass_Right"])
+					elif is_null(left) and is_null(right) and not is_null(up) and not is_null(down):
+						grass_layer.set_cell(set_cell, 0, TILE_ATLAS["grass_Center_strait_vertical"])
+					elif not is_null(left) and not is_null(right) and is_null(up) and is_null(down):
+						grass_layer.set_cell(set_cell, 0, TILE_ATLAS["grass_Center_strait_sideward"])
+					elif is_null(left) and is_null(right) and not is_null(up) and is_null(down):
+						grass_layer.set_cell(set_cell, 0, TILE_ATLAS["grass_Center_end_Bottom"])
+					elif is_null(left) and is_null(right) and is_null(up) and not is_null(down):
+						grass_layer.set_cell(set_cell, 0, TILE_ATLAS["grass_Center_end_Top"])
+					elif not is_null(left) and is_null(right) and is_null(up) and is_null(down):
+						grass_layer.set_cell(set_cell, 0, TILE_ATLAS["grass_Center_end_Right"])
+					elif is_null(left) and not is_null(right) and is_null(up) and is_null(down):
+						grass_layer.set_cell(set_cell, 0, TILE_ATLAS["grass_Center_end_Left"])
+					elif is_null(left) and not is_null(right) and is_null(up) and not is_null(down):
+						grass_layer.set_cell(set_cell, 0, TILE_ATLAS["grass_corner_Top_left"])
+					elif not is_null(left) and is_null(right) and is_null(up) and not is_null(down):
+						grass_layer.set_cell(set_cell, 0, TILE_ATLAS["grass_corner_Top_Right"])
+					elif is_null(left) and not is_null(right) and not is_null(up) and is_null(down):
+						grass_layer.set_cell(set_cell, 0, TILE_ATLAS["grass_corner_Bottom_Left"])
+					elif not is_null(left) and is_null(right) and not is_null(up) and is_null(down):
+						grass_layer.set_cell(set_cell, 0, TILE_ATLAS["grass_corner_Bottom_Right"])
+					elif is_null(left) and is_null(right) and is_null(up) and is_null(down):
+						grass_layer.set_cell(set_cell, 0, TILE_ATLAS["grass_very_center"])
+			elif is_null(me):
+				if is_grass(up):
+					if is_grass(up_left) and is_grass(up_right):
+						underside_layer.set_cell(set_cell, 0, TILE_ATLAS["underside_Top_Middle"])
+					elif not is_grass(up_left) and is_grass(up_right):
+						underside_layer.set_cell(set_cell, 0, TILE_ATLAS["underside_Top_left"])
+					elif is_grass(up_left) and not is_grass(up_right):
+						underside_layer.set_cell(set_cell, 0, TILE_ATLAS["underside_Top_right"])
+					elif not is_grass(up_left) and not is_grass(up_right):
+						underside_layer.set_cell(set_cell, 0, TILE_ATLAS["underside_Top_Center"])
+				elif underside_up == TILE_ATLAS["underside_Top_Center"]:
+					underside_layer.set_cell(set_cell, 0, TILE_ATLAS["underside_Bottom_Center"])
+				elif underside_up == TILE_ATLAS["underside_Top_left"]:
+					underside_layer.set_cell(set_cell, 0, TILE_ATLAS["underside_Bottom_left"])
+				elif underside_up == TILE_ATLAS["underside_Top_Middle"]:
+					underside_layer.set_cell(set_cell, 0, TILE_ATLAS["underside_Bottom_Middle"])
+				elif underside_up == TILE_ATLAS["underside_Top_right"]:
+					underside_layer.set_cell(set_cell, 0, TILE_ATLAS["underside_Bottom_right"])
 
-			
-			#set the edges of the grass
-			if isgrass(me):
-				if isn(left) or isn(right) or isn(up) or isn(down): #something everywhere
-					if !isn(left) && !isn(right) && isn(up) && !isn(down): #nothing up
-						grassLayer.set_cell(setcell, 0, Dic["grass_Top"])
-					elif !isn(left) && !isn(right) && !isn(up) && isn(down): #nothing down
-						grassLayer.set_cell(setcell, 0, Dic["grass_Bottom"])
-					elif isn(left) && !isn(right) && !isn(up) && !isn(down): #nothing left
-						grassLayer.set_cell(setcell, 0, Dic["grass_Left"])
-					elif !isn(left) && isn(right) && !isn(up) && !isn(down): #nothing right
-						grassLayer.set_cell(setcell, 0, Dic["grass_Right"])
-						
-					elif isn(left) && isn(right) && !isn(up) && !isn(down): #some up and down
-						grassLayer.set_cell(setcell, 0, Dic["grass_Center_strait_vertical"])
-					elif !isn(left) && !isn(right) && isn(up) && isn(down): #some left and right
-						grassLayer.set_cell(setcell, 0, Dic["grass_Center_strait_sideward"])
-					
-					elif isn(left) && isn(right) && !isn(up) && isn(down): #something up
-						grassLayer.set_cell(setcell, 0, Dic["grass_Center_end_Bottom"])
-					elif isn(left) && isn(right) && isn(up) && !isn(down): #something down
-						grassLayer.set_cell(setcell, 0, Dic["grass_Center_end_Top"])
-					elif !isn(left) && isn(right) && isn(up) && isn(down): #something left
-						grassLayer.set_cell(setcell, 0, Dic["grass_Center_end_Right"])
-					elif isn(left) && !isn(right) && isn(up) && isn(down): #something right 
-						grassLayer.set_cell(setcell, 0, Dic["grass_Center_end_Left"])
-					
-					elif isn(left) && !isn(right) && isn(up) && !isn(down): #nothing up and left
-						grassLayer.set_cell(setcell, 0, Dic["grass_corner_Top_left"])
-					elif !isn(left) && isn(right) && isn(up) && !isn(down): #nothing up and right
-						grassLayer.set_cell(setcell, 0, Dic["grass_corner_Top_Right"])
-					elif isn(left) && !isn(right) && !isn(up) && isn(down): #nothing down left
-						grassLayer.set_cell(setcell, 0, Dic["grass_corner_Bottom_Left"])
-					elif !isn(left) && isn(right) && !isn(up) && isn(down): #nothing down right
-						grassLayer.set_cell(setcell, 0, Dic["grass_corner_Bottom_Right"])
-						
-					elif isn(left) && isn(right) && isn(up) && isn(down):
-						grassLayer.set_cell(setcell, 0, Dic["grass_very_center"])
-				
-			#underside peaces
-			elif isn(me):
-				#first layer of underside
-				if isgrass(up):
-					#underside_Top_Middle
-					if isgrass(up_left) and isgrass(up_right):
-						underside.set_cell(setcell, 0, Dic["underside_Top_Middle"])
-					#underside_Top_left
-					elif !isgrass(up_left) and isgrass(up_right):
-						underside.set_cell(setcell, 0, Dic["underside_Top_left"])
-					#underside_Top_right
-					elif isgrass(up_left) and !isgrass(up_right):
-						underside.set_cell(setcell, 0, Dic["underside_Top_right"])
-					#underside_Top_Center
-					elif !isgrass(up_left) and !isgrass(up_right):
-						underside.set_cell(setcell, 0, Dic["underside_Top_Center"])
-				
-				#second layer of underside
-				elif underside_up == Dic["underside_Top_Center"]:
-					underside.set_cell(setcell, 0, Dic["underside_Bottom_Center"])
-				elif underside_up == Dic["underside_Top_left"]:
-					underside.set_cell(setcell, 0, Dic["underside_Bottom_left"])
-				elif underside_up == Dic["underside_Top_Middle"]:
-					underside.set_cell(setcell, 0, Dic["underside_Bottom_Middle"])
-				elif underside_up == Dic["underside_Top_right"]:
-					underside.set_cell(setcell, 0, Dic["underside_Bottom_right"])
-
-func hillsecondlayerfilter():
+func apply_hill_filters():
 	for x in range(Global.islandSize.x):
 		for y in range(Global.islandSize.y):
-			var setcell = Vector2i(x - Global.islandSize.x/2, y - Global.islandSize.y/2)
-			var setcell_up = Vector2i(x - Global.islandSize.x/2, y - Global.islandSize.y/2 - 1)
-			var setcell_up_left = Vector2i(x - Global.islandSize.x/2 - 1, y - Global.islandSize.y/2 - 1)
-			var setcell_up_right = Vector2i(x - Global.islandSize.x/2 + 1, y - Global.islandSize.y/2 - 1)
-			var setcell_down = Vector2i(x - Global.islandSize.x/2, y - Global.islandSize.y/2 + 1)
-			var setcell_down_left = Vector2i(x - Global.islandSize.x/2 - 1, y - Global.islandSize.y/2 + 1)
-			var setcell_down_right = Vector2i(x - Global.islandSize.x/2 + 1, y - Global.islandSize.y/2 + 1)
-			var setcell_left = Vector2i(x - Global.islandSize.x/2 - 1, y - Global.islandSize.y/2)
-			var setcell_right = Vector2i(x - Global.islandSize.x/2 + 1, y - Global.islandSize.y/2)
-			var hill_me = hill.get_cell_atlas_coords(setcell)
-			var hill_up_left = hill.get_cell_atlas_coords(setcell_up_left)
-			var hill_up_right = hill.get_cell_atlas_coords(setcell_up_right)
-			var hill_up = hill.get_cell_atlas_coords(setcell_up)
-			var hill_down = hill.get_cell_atlas_coords(setcell_down)
-			var hill_left = hill.get_cell_atlas_coords(setcell_left)
-			var hill_right = hill.get_cell_atlas_coords(setcell_right)
+			var set_cell = Vector2i(x - Global.islandSize.x/2, y - Global.islandSize.y/2)
+			var set_cell_up = Vector2i(x - Global.islandSize.x/2, y - Global.islandSize.y/2 - 1)
+			var set_cell_up_left = Vector2i(x - Global.islandSize.x/2 - 1, y - Global.islandSize.y/2 - 1)
+			var set_cell_up_right = Vector2i(x - Global.islandSize.x/2 + 1, y - Global.islandSize.y/2 - 1)
+			var set_cell_down = Vector2i(x - Global.islandSize.x/2, y - Global.islandSize.y/2 + 1)
+			var set_cell_down_left = Vector2i(x - Global.islandSize.x/2 - 1, y - Global.islandSize.y/2 + 1)
+			var set_cell_down_right = Vector2i(x - Global.islandSize.x/2 + 1, y - Global.islandSize.y/2 + 1)
+			var set_cell_left = Vector2i(x - Global.islandSize.x/2 - 1, y - Global.islandSize.y/2)
+			var set_cell_right = Vector2i(x - Global.islandSize.x/2 + 1, y - Global.islandSize.y/2)
 			
-			#set the edges of the hill
-			if ishill(hill_me):				
-				if !ishill(hill_left):
-					if !ishill(hill_up) && hill_down == Dic["null"]:
-						hill.set_cell(setcell, 0, Dic["hill_Left"])
-					elif !ishill(hill_up):
-						hill.set_cell(setcell, 0, Dic["hill_Top_left"])
-					elif hill_down == Dic["null"]:
-						hill.set_cell(setcell, 0, Dic["hill_Bottom_Left"])
+			var hill_me = hill_layer.get_cell_atlas_coords(set_cell)
+			var hill_up_left = hill_layer.get_cell_atlas_coords(set_cell_up_left)
+			var hill_up_right = hill_layer.get_cell_atlas_coords(set_cell_up_right)
+			var hill_up = hill_layer.get_cell_atlas_coords(set_cell_up)
+			var hill_down = hill_layer.get_cell_atlas_coords(set_cell_down)
+			var hill_left = hill_layer.get_cell_atlas_coords(set_cell_left)
+			var hill_right = hill_layer.get_cell_atlas_coords(set_cell_right)
+			
+			if is_hill(hill_me):				
+				if not is_hill(hill_left):
+					if not is_hill(hill_up) and is_null(hill_down):
+						hill_layer.set_cell(set_cell, 0, TILE_ATLAS["hill_Left"])
+					elif not is_hill(hill_up):
+						hill_layer.set_cell(set_cell, 0, TILE_ATLAS["hill_Top_left"])
+					elif is_null(hill_down):
+						hill_layer.set_cell(set_cell, 0, TILE_ATLAS["hill_Bottom_Left"])
 					else:
-						hill.set_cell(setcell, 0, Dic["hill_Left"])
-				elif hill_right == Dic["null"]:
-					if !ishill(hill_up) && hill_down == Dic["null"]:
-						hill.set_cell(setcell, 0, Dic["hill_Right"])
-					elif !ishill(hill_up):
-						hill.set_cell(setcell, 0, Dic["hill_Top_Right"])
-					elif hill_down == Dic["null"]:
-						hill.set_cell(setcell, 0, Dic["hill_Bottom_Right"])
+						hill_layer.set_cell(set_cell, 0, TILE_ATLAS["hill_Left"])
+				elif is_null(hill_right):
+					if not is_hill(hill_up) and is_null(hill_down):
+						hill_layer.set_cell(set_cell, 0, TILE_ATLAS["hill_Right"])
+					elif not is_hill(hill_up):
+						hill_layer.set_cell(set_cell, 0, TILE_ATLAS["hill_Top_Right"])
+					elif is_null(hill_down):
+						hill_layer.set_cell(set_cell, 0, TILE_ATLAS["hill_Bottom_Right"])
 					else:
-						hill.set_cell(setcell, 0, Dic["hill_Right"])
-				elif !ishill(hill_up):
-					hill.set_cell(setcell, 0, Dic["hill_Top"])
-				elif hill_down == Dic["null"]:
-					hill.set_cell(setcell, 0, Dic["hill_Bottom"])
+						hill_layer.set_cell(set_cell, 0, TILE_ATLAS["hill_Right"])
+				elif not is_hill(hill_up):
+					hill_layer.set_cell(set_cell, 0, TILE_ATLAS["hill_Top"])
+				elif is_null(hill_down):
+					hill_layer.set_cell(set_cell, 0, TILE_ATLAS["hill_Bottom"])
 			
-			#set the pilats inder the hill
-			if hill_me == Dic["null"]:
-				if ishill(hill_up):
-					if ishill(hill_up_right) and ishill(hill_up_left):
-						hill.set_cell(setcell, 0, Dic["hill_pilar"])
-					#underside_Top_left
-					elif ishill(hill_up_right) and  !ishill(hill_up_left):
-						hill.set_cell(setcell, 0, Dic["hill_pilar_left"])
-					#underside_Top_right
-					elif !ishill(hill_up_right) and  ishill(hill_up_left):
-						hill.set_cell(setcell, 0, Dic["hill_pilar_right"])
-					#underside_Top_Center
-					elif !ishill(hill_up_right) and  !ishill(hill_up_left):
-						hill.set_cell(setcell, 0, Dic["hill_pilar_Center"])
+			if is_null(hill_me):
+				if is_hill(hill_up):
+					if is_hill(hill_up_right) and is_hill(hill_up_left):
+						hill_layer.set_cell(set_cell, 0, TILE_ATLAS["hill_pilar"])
+					elif is_hill(hill_up_right) and not is_hill(hill_up_left):
+						hill_layer.set_cell(set_cell, 0, TILE_ATLAS["hill_pilar_left"])
+					elif not is_hill(hill_up_right) and is_hill(hill_up_left):
+						hill_layer.set_cell(set_cell, 0, TILE_ATLAS["hill_pilar_right"])
+					elif not is_hill(hill_up_right) and not is_hill(hill_up_left):
+						hill_layer.set_cell(set_cell, 0, TILE_ATLAS["hill_pilar_Center"])
 
-func collsionlayerfilter():
+func apply_collision_filters():
 	for x in range(Global.islandSize.x):
 		for y in range(Global.islandSize.y):
-			var setcell = Vector2i(x - Global.islandSize.x/2, y - Global.islandSize.y/2)
-			var setcell_down = Vector2i(x - Global.islandSize.x/2, y - Global.islandSize.y/2 + 1)
-			var hill_me = hill.get_cell_atlas_coords(setcell)
+			var set_cell = Vector2i(x - Global.islandSize.x/2, y - Global.islandSize.y/2)
+			var set_cell_down = Vector2i(x - Global.islandSize.x/2, y - Global.islandSize.y/2 + 1)
+			var hill_me = hill_layer.get_cell_atlas_coords(set_cell)
 			
-			if ishill(hill_me):
-				grassLayer.set_cell(setcell_down, 0, Dic["grass_collision_all"])
+			if is_hill(hill_me):
+				grass_layer.set_cell(set_cell_down, 0, TILE_ATLAS["grass_collision_all"])
 
-#checks if the given atlascoords is any type of grass
-func isgrass(grassmaybe: Vector2i) -> bool:
-	if grassmaybe == Dic["grass"]: return true
-	elif grassmaybe == Dic["grass_Bottom"]: return true
-	elif grassmaybe == Dic["grass_Left"]: return true
-	elif grassmaybe == Dic["grass_Right"]: return true
-	elif grassmaybe == Dic["grass_Top"]: return true
-	elif grassmaybe == Dic["grass_Center_end_Bottom"]: return true
-	elif grassmaybe == Dic["grass_Center_end_Left"]: return true
-	elif grassmaybe == Dic["grass_Center_end_Right"]: return true
-	elif grassmaybe == Dic["grass_Center_end_Top"]: return true
-	elif grassmaybe == Dic["grass_Center_strait_sideward"]: return true
-	elif grassmaybe == Dic["grass_Center_strait_vertical"]: return true
-	elif grassmaybe == Dic["grass_corner_Bottom_Left"]: return true
-	elif grassmaybe == Dic["grass_corner_Bottom_Right"]: return true
-	elif grassmaybe == Dic["grass_corner_Top_left"]: return true
-	elif grassmaybe == Dic["grass_corner_Top_Right"]: return true
-	
-	else:
-		return false
+func is_grass(tile: Vector2i) -> bool:
+	return tile in [
+		TILE_ATLAS["grass"], TILE_ATLAS["grass_Bottom"], TILE_ATLAS["grass_Left"], 
+		TILE_ATLAS["grass_Right"], TILE_ATLAS["grass_Top"], TILE_ATLAS["grass_Center_end_Bottom"],
+		TILE_ATLAS["grass_Center_end_Left"], TILE_ATLAS["grass_Center_end_Right"], 
+		TILE_ATLAS["grass_Center_end_Top"], TILE_ATLAS["grass_Center_strait_sideward"],
+		TILE_ATLAS["grass_Center_strait_vertical"], TILE_ATLAS["grass_corner_Bottom_Left"],
+		TILE_ATLAS["grass_corner_Bottom_Right"], TILE_ATLAS["grass_corner_Top_left"],
+		TILE_ATLAS["grass_corner_Top_Right"]
+	]
 
-func ishill(grassmaybe: Vector2i) -> bool:
-	if grassmaybe == Dic["hill"]: return true
-	elif grassmaybe == Dic["hill_Center"]: return true
-	elif grassmaybe == Dic["hill_Left"]: return true
-	elif grassmaybe == Dic["hill_Right"]: return true
-	elif grassmaybe == Dic["hill_Top"]: return true
-	elif grassmaybe == Dic["hill_Bottom"]: return true
-	elif grassmaybe == Dic["hill_Bottom_Left"]: return true
-	elif grassmaybe == Dic["hill_Bottom_Right"]: return true
-	elif grassmaybe == Dic["hill_Top_left"]: return true
-	elif grassmaybe == Dic["hill_Top_Right"]: return true
-	
-	else:
-		return false
+func is_hill(tile: Vector2i) -> bool:
+	return tile in [
+		TILE_ATLAS["hill"], TILE_ATLAS["hill_Center"], TILE_ATLAS["hill_Left"],
+		TILE_ATLAS["hill_Right"], TILE_ATLAS["hill_Top"], TILE_ATLAS["hill_Bottom"],
+		TILE_ATLAS["hill_Bottom_Left"], TILE_ATLAS["hill_Bottom_Right"],
+		TILE_ATLAS["hill_Top_left"], TILE_ATLAS["hill_Top_Right"]
+	]
 
-func isn(isnull: Vector2i) -> bool:
-	return isnull == Dic["null"]
+func is_null(tile: Vector2i) -> bool:
+	return tile == TILE_ATLAS["null"]

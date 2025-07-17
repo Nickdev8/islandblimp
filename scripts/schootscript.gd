@@ -7,13 +7,13 @@ extends Node2D
 @export var accuracy: float = 0.1
 @export var projectile_speed: float = 300.0
 @export var projectile_damage: int = 10
+@export var see_distance: float = 100.0
 @export var projectile_max_distance: float = 1000.0
 
 var _rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	_rng.randomize()
-	# set up a repeating timer to shoot
 	var t := Timer.new()
 	t.wait_time = shoot_interval
 	t.one_shot = false
@@ -28,31 +28,34 @@ func _on_shoot_timeout() -> void:
 
 func _find_closest_target() -> Node2D:
 	var best: Node2D
-	var best_dist := projectile_max_distance
-	var targets
+	var best_dist := see_distance
+	var targets: Array = []
 	if is_Enemys:
 		targets = get_tree().get_nodes_in_group("Bots")
 		targets.append_array(get_tree().get_nodes_in_group("player"))
 	else:
 		targets = get_tree().get_nodes_in_group("Enemys")
-		
+
 	for enemy in targets:
 		var d = global_position.distance_to(enemy.global_position)
 		if d < best_dist:
 			best_dist = d
 			best = enemy
+
 	return best
 
 func _shoot_at(target: Node2D) -> void:
-	# 1. instantiate projectile
 	var proj = projectile_scene.instantiate()
-	# 2. add it to the active scene
 	get_tree().current_scene.add_child(proj)
-	# 3. position & configure
+	proj.from_enimi    = is_Enemys
+	proj.scan          = true
 	proj.global_position = global_position
+
 	var dir = (target.global_position - global_position).normalized()
-	dir += Vector2(_rng.randf_range(-accuracy, accuracy),
-				   _rng.randf_range(-accuracy, accuracy))
+	dir += Vector2(
+		_rng.randf_range(-accuracy, accuracy),
+		_rng.randf_range(-accuracy, accuracy)
+	)
 	proj.direction    = dir.normalized()
 	proj.speed        = projectile_speed
 	proj.damage       = projectile_damage

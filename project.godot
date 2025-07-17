@@ -28,13 +28,13 @@ aseprite_executable_path="C:/Program Files (x86)/Aseprite/aseprite.exe"
 PhantomCameraManager="*res://addons/phantom_camera/scripts/managers/phantom_camera_manager.gd"
 Global="*res://scripts/global.gd"
 
-[display]
+[editor]
 
-window/size/mode=3
+movie_writer/movie_file="/home/nick/Documents/HackClub/projects/moviegen.avi"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/fastnoiselite-configurator/plugin.cfg", "res://addons/nklbdev.aseprite_importers/plugin.cfg", "res://addons/nklbdev.tile_set_polygon_snapper/plugin.cfg", "res://addons/phantom_camera/plugin.cfg")
+enabled=PackedStringArray("res://addons/fastnoiselite-configurator/plugin.cfg", "res://addons/godot_super-wakatime/plugin.cfg", "res://addons/nklbdev.aseprite_importers/plugin.cfg", "res://addons/nklbdev.tile_set_polygon_snapper/plugin.cfg", "res://addons/phantom_camera/plugin.cfg")
 
 [global_group]
 

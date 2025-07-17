@@ -7,7 +7,7 @@ class_name Enemy extends CharacterBody2D
 @onready var animsprites: Array[AnimatedSprite2D] = [
 	$AnimatedSprite2D,
 ]
-@onready var energy_bar: Node2D = $energyBar
+@onready var energy_bar: Control = $energyBar
 
 @onready var navigation_agent_2d: NavigationAgent2D = $NavigationAgent2D
 @onready var teleport_timer: Timer = $TeleportTimer
@@ -52,6 +52,7 @@ func _input(event: InputEvent) -> void:
 
 func _physics_process(_delta: float) -> void:
 	if target:
+		scale = Vector2(1,1)
 		var dir = to_local(navigation_agent_2d.get_next_path_position()).normalized()
 		nav_velocity = dir * birbstats[activeAnimator]["speed"]
 		navigation_agent_2d.velocity = nav_velocity

@@ -1,39 +1,39 @@
 [gd_scene load_steps=10 format=3 uid="uid://dxhinlcmr77og"]
 
 [ext_resource type="Script" uid="uid://buh20fpvtsdd6" path="res://scripts/computer.gd" id="1_33jy6"]
-[ext_resource type="Texture2D" uid="uid://lp5yrh3cq577" path="res://assets/cumputer.png" id="1_q47ye"]
+[ext_resource type="Texture2D" uid="uid://cot80l1ntux2n" path="res://assets/computer.png" id="2_tdtlj"]
 [ext_resource type="Texture2D" uid="uid://brgbryjwgy4w5" path="res://assets/tiles_packed.png" id="4_kwj81"]
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_asxtr"]
-atlas = ExtResource("1_q47ye")
+[sub_resource type="AtlasTexture" id="AtlasTexture_cxrug"]
+atlas = ExtResource("2_tdtlj")
 region = Rect2(0, 0, 32, 48)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_6jd4i"]
-atlas = ExtResource("1_q47ye")
+[sub_resource type="AtlasTexture" id="AtlasTexture_36qyv"]
+atlas = ExtResource("2_tdtlj")
 region = Rect2(32, 0, 32, 48)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_y76eg"]
-atlas = ExtResource("1_q47ye")
+[sub_resource type="AtlasTexture" id="AtlasTexture_g6mmx"]
+atlas = ExtResource("2_tdtlj")
 region = Rect2(64, 0, 32, 48)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_8hals"]
-atlas = ExtResource("1_q47ye")
+[sub_resource type="AtlasTexture" id="AtlasTexture_a8nm8"]
+atlas = ExtResource("2_tdtlj")
 region = Rect2(96, 0, 32, 48)
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_latj5"]
 animations = [{
 "frames": [{
 "duration": 1.0,
-"texture": SubResource("AtlasTexture_asxtr")
+"texture": SubResource("AtlasTexture_cxrug")
 }, {
 "duration": 1.0,
-"texture": SubResource("AtlasTexture_6jd4i")
+"texture": SubResource("AtlasTexture_36qyv")
 }, {
 "duration": 1.0,
-"texture": SubResource("AtlasTexture_y76eg")
+"texture": SubResource("AtlasTexture_g6mmx")
 }, {
 "duration": 1.0,
-"texture": SubResource("AtlasTexture_8hals")
+"texture": SubResource("AtlasTexture_a8nm8")
 }],
 "loop": true,
 "name": &"default",
@@ -43,46 +43,48 @@ animations = [{
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_4e2ev"]
 size = Vector2(20, 8)
 
-[node name="computer" type="StaticBody2D"]
+[node name="Node2D" type="Node2D"]
+
+[node name="computer" type="StaticBody2D" parent="."]
 z_index = 25
 z_as_relative = false
 y_sort_enabled = true
 position = Vector2(8, 6)
 script = ExtResource("1_33jy6")
 
-[node name="animsprite" type="AnimatedSprite2D" parent="."]
+[node name="animsprite" type="AnimatedSprite2D" parent="computer"]
 sprite_frames = SubResource("SpriteFrames_latj5")
 autoplay = "default"
 offset = Vector2(0, -22)
 
-[node name="ColorRect" type="ColorRect" parent="animsprite"]
+[node name="ColorRect" type="ColorRect" parent="computer/animsprite"]
 offset_left = -3.0
 offset_top = -16.0
 offset_right = -2.0
 offset_bottom = -13.0
 color = Color(0.65098, 0.729412, 0.619608, 1)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="computer"]
 position = Vector2(0, -4)
 shape = SubResource("RectangleShape2D_4e2ev")
 
-[node name="NavigationObstacle2D" type="NavigationObstacle2D" parent="."]
+[node name="NavigationObstacle2D" type="NavigationObstacle2D" parent="computer"]
 position = Vector2(0, -4)
 radius = 1.0
 vertices = PackedVector2Array(13, 4, 13, -4, -13, -4, -13, 4, 13, 4)
 affect_navigation_mesh = true
 carve_navigation_mesh = true
 
-[node name="Gound" type="Node2D" parent="."]
+[node name="Gound" type="Node2D" parent="computer"]
 
-[node name="Sprite2D" type="Sprite2D" parent="Gound"]
+[node name="Sprite2D" type="Sprite2D" parent="computer/Gound"]
 z_index = -1
 position = Vector2(-8, -6)
 texture = ExtResource("4_kwj81")
 region_enabled = true
 region_rect = Rect2(256, 48, 16, 16)
 
-[node name="Sprite2D4" type="Sprite2D" parent="Gound"]
+[node name="Sprite2D4" type="Sprite2D" parent="computer/Gound"]
 z_index = -1
 position = Vector2(-8, 1)
 texture = ExtResource("4_kwj81")
@@ -90,14 +92,14 @@ offset = Vector2(0, 9)
 region_enabled = true
 region_rect = Rect2(256, 80, 16, 16)
 
-[node name="Sprite2D2" type="Sprite2D" parent="Gound"]
+[node name="Sprite2D2" type="Sprite2D" parent="computer/Gound"]
 z_index = -1
 position = Vector2(8, -6)
 texture = ExtResource("4_kwj81")
 region_enabled = true
 region_rect = Rect2(288, 48, 16, 16)
 
-[node name="Sprite2D3" type="Sprite2D" parent="Gound"]
+[node name="Sprite2D3" type="Sprite2D" parent="computer/Gound"]
 z_index = -1
 position = Vector2(8, 1)
 texture = ExtResource("4_kwj81")
@@ -105,6 +107,6 @@ offset = Vector2(0, 9)
 region_enabled = true
 region_rect = Rect2(288, 80, 16, 16)
 
-[node name="Timer" type="Timer" parent="."]
+[node name="Timer" type="Timer" parent="computer"]
 wait_time = 2.0
 autostart = true

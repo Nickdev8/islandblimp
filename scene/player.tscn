@@ -352,4 +352,3 @@ rotation = 1.5708
 shape = SubResource("CapsuleShape2D_pvijb")
 
 [node name="shadow" parent="." instance=ExtResource("3_2imsi")]
-texture = null

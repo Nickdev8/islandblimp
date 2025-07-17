@@ -1,4 +1,8 @@
-[gd_scene format=3 uid="uid://dr72leak5qos7"]
+[gd_scene load_steps=2 format=3 uid="uid://dr72leak5qos7"]
+
+[ext_resource type="Texture2D" uid="uid://c1lmd7alowdni" path="res://assets/shadow.png" id="1_io0bu"]
 
 [node name="shadow" type="Sprite2D"]
+z_index = -1
+texture = ExtResource("1_io0bu")
 offset = Vector2(0, -6)

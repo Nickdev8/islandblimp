@@ -6,7 +6,12 @@
 [sub_resource type="CircleShape2D" id="CircleShape2D_v1jrq"]
 
 [node name="Projectile" type="Area2D"]
+collision_layer = 7
+collision_mask = 7
 script = ExtResource("1_v1jrq")
+speed = 100.0
+damage = 1
+max_distance = 100.0
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 z_index = 1000
