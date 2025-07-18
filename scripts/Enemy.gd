@@ -79,25 +79,25 @@ func set_nearest_bot() -> RoBot:
 func targetlogic():
 	var nearestbot: RoBot = set_nearest_bot()
 	var current_target: Node2D
-	var player: Node
+	#var player: Node
 	var core: Node
-	
-	if get_tree().get_nodes_in_group("player").is_empty() or get_tree().get_nodes_in_group("Core").is_empty() or get_tree().get_nodes_in_group("Bots").is_empty():
+	#get_tree().get_nodes_in_group("player").is_empty() or 
+	if get_tree().get_nodes_in_group("Core").is_empty() or get_tree().get_nodes_in_group("Bots").is_empty():
 		return
 	
-	player = get_tree().get_nodes_in_group("player")[0]
+	#player = get_tree().get_nodes_in_group("player")[0]
 	core = get_tree().get_nodes_in_group("Core")[0]
 
 	var dist_to_nearbot = global_position.distance_to(nearestbot.global_position)
-	var dist_to_player = global_position.distance_to(player.global_position) - 8
+	#var dist_to_player = global_position.distance_to(player.global_position) - 8
 	var dist_to_core = global_position.distance_to(core.global_position) - 16
 
-	# Determine the nearest player
-	var min_distance = min(dist_to_nearbot, dist_to_player, dist_to_core)
+	# Determine the nearest player   dist_to_player, 
+	var min_distance = min(dist_to_nearbot, dist_to_core)
 
-	if min_distance == dist_to_player:
-		current_target = player
-	elif min_distance == dist_to_core:
+	#if min_distance == dist_to_player:
+	#	current_target = player
+	if min_distance == dist_to_core:
 		current_target = core
 	elif min_distance == dist_to_nearbot:
 		current_target = nearestbot

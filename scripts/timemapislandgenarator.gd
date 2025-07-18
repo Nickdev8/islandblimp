@@ -63,14 +63,18 @@ const TILE_ATLAS: Dictionary = {
 	
 	"path_Center" : Vector2i(21, 4),
 	
-	"underside_Top_Middle" : Vector2i(18, 0),
-	"underside_Top_Center" : Vector2i(19, 4),
-	"underside_Top_left" : Vector2i(16, 0),
-	"underside_Top_right" : Vector2i(19, 0),
-	"underside_Bottom_Middle" : Vector2i(18, 1),
-	"underside_Bottom_Center" : Vector2i(19, 5),
-	"underside_Bottom_left" : Vector2i(16, 1),
-	"underside_Bottom_right" : Vector2i(19, 1),
+	"underside_Top_Middle" : Vector2i(1, 5),
+	"underside_Top_Center" : Vector2i(5, 5),
+	"underside_Top_left" : Vector2i(0, 5),
+	"underside_Top_right" : Vector2i(2, 5),
+	"underside_Center_Middle" : Vector2i(1, 6),
+	"underside_Center_Center" : Vector2i(5, 6),
+	"underside_Center_left" : Vector2i(0, 6),
+	"underside_Center_right" : Vector2i(2, 6),
+	"underside_Bottom_Middle" : Vector2i(1, 7),
+	"underside_Bottom_Center" : Vector2i(5, 7),
+	"underside_Bottom_left" : Vector2i(0, 7),
+	"underside_Bottom_right" : Vector2i(2, 7),
 	
 	"hill" : Vector2i(17, 7),
 	"hill_Center" : Vector2i(6, 6),
@@ -181,9 +185,9 @@ func generate_map():
 	
 	# Generate scenes/objects
 	generate_scene(1)  # Computer
-	for i in 4: generate_scene(2)  # Seats
-	for i in 5: generate_scene(4 + i)  # Chargers
-	for i in 4: generate_scene(4)  # Companions
+	for i in 7: generate_scene(2)  # Seats
+	for i in 7: generate_scene(4 + i)  # Chargers
+	for i in 10: generate_scene(4)  # Companions
 	
 	# Place core
 	bottom_items_layer.set_cell(core_tile_position, 1, Vector2i.ZERO, 3)
@@ -419,12 +423,20 @@ func apply_second_layer_filters():
 					elif not is_grass(up_left) and not is_grass(up_right):
 						underside_layer.set_cell(set_cell, 0, TILE_ATLAS["underside_Top_Center"])
 				elif underside_up == TILE_ATLAS["underside_Top_Center"]:
-					underside_layer.set_cell(set_cell, 0, TILE_ATLAS["underside_Bottom_Center"])
+					underside_layer.set_cell(set_cell, 0, TILE_ATLAS["underside_Center_Center"])
 				elif underside_up == TILE_ATLAS["underside_Top_left"]:
-					underside_layer.set_cell(set_cell, 0, TILE_ATLAS["underside_Bottom_left"])
+					underside_layer.set_cell(set_cell, 0, TILE_ATLAS["underside_Center_left"])
 				elif underside_up == TILE_ATLAS["underside_Top_Middle"]:
-					underside_layer.set_cell(set_cell, 0, TILE_ATLAS["underside_Bottom_Middle"])
+					underside_layer.set_cell(set_cell, 0, TILE_ATLAS["underside_Center_Middle"])
 				elif underside_up == TILE_ATLAS["underside_Top_right"]:
+					underside_layer.set_cell(set_cell, 0, TILE_ATLAS["underside_Center_right"])
+				elif underside_up == TILE_ATLAS["underside_Center_Center"]:
+					underside_layer.set_cell(set_cell, 0, TILE_ATLAS["underside_Bottom_Center"])
+				elif underside_up == TILE_ATLAS["underside_Center_left"]:
+					underside_layer.set_cell(set_cell, 0, TILE_ATLAS["underside_Bottom_left"])
+				elif underside_up == TILE_ATLAS["underside_Center_Middle"]:
+					underside_layer.set_cell(set_cell, 0, TILE_ATLAS["underside_Bottom_Middle"])
+				elif underside_up == TILE_ATLAS["underside_Center_right"]:
 					underside_layer.set_cell(set_cell, 0, TILE_ATLAS["underside_Bottom_right"])
 
 func apply_hill_filters():

@@ -1,4 +1,3 @@
-@tool    # optional: run in the editor so you can tweak live
 extends Control
 
 # ——— the exports now use “: set = …” instead of setget ———

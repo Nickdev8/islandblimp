@@ -32,7 +32,7 @@ func _find_closest_target() -> Node2D:
 	var targets: Array = []
 	if is_Enemys:
 		targets = get_tree().get_nodes_in_group("Bots")
-		targets.append_array(get_tree().get_nodes_in_group("player"))
+		targets.append_array(get_tree().get_nodes_in_group("Core"))
 	else:
 		targets = get_tree().get_nodes_in_group("Enemys")
 

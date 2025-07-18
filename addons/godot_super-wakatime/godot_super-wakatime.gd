@@ -48,11 +48,21 @@ var key_get_tries: int = 0
 var counter_instance: Node
 var current_time: String = "0 hrs, 0mins"
 
+var idle_timer: Timer
+
 
 # #------------------------------- DIRECT PLUGIN FUNCTIONS -------------------------------
 func _ready() -> void:
 	setup_plugin()
 	set_process(true)
+	
+	# Setup idle timer
+	idle_timer = Timer.new()
+	idle_timer.set_wait_time(120)  # every 60 seconds
+	idle_timer.set_one_shot(false)
+	idle_timer.connect("timeout", Callable(self, "_on_idle_timer_timeout"))
+	add_child(idle_timer)
+	idle_timer.start()
 	
 func _exit_tree() -> void:
 	_disable_plugin()
@@ -152,6 +162,15 @@ func _on_script_changed(file) -> void:
 		last_file_path = ProjectSettings.globalize_path(file.resource_path)
 	handle_activity(last_file_path)
 	
+func _on_idle_timer_timeout() -> void:
+	var current_file = get_current_file()
+	if current_file:
+		handle_activity(ProjectSettings.globalize_path(current_file.resource_path), false, true)
+	else:
+		var current_scene = _get_current_scene()
+		if current_scene:
+			handle_activity_scene(current_scene, false, false, true)
+			
 #func _unhandled_key_input(event: InputEvent) -> void:
 #	"""Handle key inputs"""
 #	var file = get_current_file()
@@ -189,24 +208,17 @@ func get_current_file():
 		last_file_path = ProjectSettings.globalize_path(file.resource_path)
 	
 	return get_editor_interface().get_script_editor().get_current_script()
-		
-func handle_activity(file, is_write: bool = false) -> void:
-	"""Handle user's activity"""
-	# If file that has activity in or wakatime cli doesn't exist, return
+
+func handle_activity(file, is_write: bool = false, force: bool = false) -> void:
 	if not file or not Utils.wakatime_cli_exists(get_waka_cli()):
 		return
-	
-	# If user is saving file or has changed path, or enough time has passed for a heartbeat - send it
-	#var filepath = ProjectSettings.globalize_path(file.resource_path)
-	if is_write or file != last_heartbeat.file_path or enough_time_passed():
-		send_heartbeat(file, is_write)
+	if is_write or file != last_heartbeat.file_path or enough_time_passed() or force:
+		send_heartbeat(file, is_write)	
 		
-func handle_activity_scene(file, is_write: bool = false, changed_file: bool = false) -> void:
-	"""Handle activity in scenes"""
+func handle_activity_scene(file, is_write: bool = false, changed_file: bool = false, force: bool = false) -> void:
 	if not file or not Utils.wakatime_cli_exists(get_waka_cli()):
 		return
-		
-	if is_write or changed_file or enough_time_passed():
+	if is_write or changed_file or enough_time_passed() or force:
 		scene_mode = true
 		send_heartbeat(file, is_write)
 		
