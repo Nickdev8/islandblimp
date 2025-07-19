@@ -57,16 +57,17 @@ animations = [{
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_4e2ev"]
 size = Vector2(20, 8)
 
-[node name="Node2D" type="Node2D" groups=["Core"]]
+[node name="Node2D" type="Node2D"]
 z_index = 25
 z_as_relative = false
 y_sort_enabled = true
-script = ExtResource("1_mso3m")
 
-[node name="StaticBody2D" type="StaticBody2D" parent="."]
+[node name="StaticBody2D" type="StaticBody2D" parent="." groups=["Core"]]
 position = Vector2(0, 10)
 collision_layer = 8
 collision_mask = 8
+script = ExtResource("1_mso3m")
+StartHealth = 14
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="StaticBody2D"]
 y_sort_enabled = true
@@ -86,6 +87,4 @@ vertices = PackedVector2Array(13, 4, 13, -4, -13, -4, -13, 4, 13, 4)
 affect_navigation_mesh = true
 carve_navigation_mesh = true
 
-[node name="energyBar" parent="." instance=ExtResource("3_mso3m")]
-offset_top = 10.0
-offset_bottom = 10.0
+[node name="energyBar" parent="StaticBody2D" instance=ExtResource("3_mso3m")]

@@ -5,6 +5,7 @@ extends CharacterBody2D
 @export var SNAP_VALUE: int = 14
 @export var gunnumber: int
 @export var activeAnimator: int = 0
+@export var see_distance: float = 100.0
 @export var min_rotation_degrees: float = -45.0
 @export var max_rotation_degrees: float = 45.0
 
@@ -18,6 +19,7 @@ extends CharacterBody2D
 @onready var healtimer: Timer = $Healtimer
 @onready var energy_bar: Control = $energyBar
 @onready var guns: AnimatedSprite2D = $guns
+@onready var shooter: ShootScript = $shooter
 
 signal health_changed(send_Health: int, send_SNAP_VALUE: int)
 signal health_start(send_Start_Health: int, send_SNAP_VALUE: int)
@@ -59,6 +61,7 @@ func _input(event: InputEvent) -> void:
 		takedamage(1)
 
 func _ready() -> void:
+	shooter.see_distance = see_distance
 	# Assign unique ID to this bot
 	bot_id = RoBot.next_bot_id
 	RoBot.next_bot_id += 1
@@ -141,9 +144,10 @@ func gunmanager() -> void:
 			orininalgunoff
 			
 			if frame in [0, 1, 2]:
-				guns.position.y = orininalgunpos.y
+				guns.offset.y = orininalgunoff.y
 			else:
-				guns.position.y = orininalgunpos.y-1
+				guns.offset.y = orininalgunoff.y-1
+			
 			if is_flipped:
 				guns.position.x = orininalgunpos.x * -1
 				guns.offset.x = orininalgunoff.x * -1
@@ -195,7 +199,8 @@ func _on_navigation_agent_2d_velocity_computed(safe_velocity: Vector2) -> void:
 
 func _on_teleport_timer_timeout() -> void:
 	if is_instance_valid(target):
-		global_position = target.global_position + Vector2(0, 3)
+		if target.global_position.distance_to(global_position) < see_distance:
+			global_position = target.global_position + Vector2(0, 3)
 
 func targetlogic() -> void:
 	var group_name
@@ -223,46 +228,60 @@ func targetlogic() -> void:
 		target = new_target
 		navigation_agent_2d.target_position = Vector2(target.global_position.x, target.global_position.y + 2)
 
+func get_nearest_enemy() -> Node2D:
+	var enemies = get_tree().get_nodes_in_group("Enemys")
+	if enemies.is_empty():
+		return null
+
+	var nearest = null
+	var nearest_dist = INF
+
+	for enemy in enemies:
+		if not is_instance_valid(enemy):
+			continue
+		var dist = global_position.distance_to(enemy.global_position)
+		if dist < nearest_dist:
+			nearest_dist = dist
+			nearest = enemy
+
+	return nearest
+
 func shootintargetlogic() -> void:
-	if target != null:
-		if is_instance_valid(target):
-			shootingtarget = target
-			look_at_with_limits(target.global_position)
-
-
+	var nearest_enemy = get_nearest_enemy()
+	if is_instance_valid(nearest_enemy):
+		if nearest_enemy.global_position.distance_to(global_position) < see_distance:
+			look_at_with_limits(nearest_enemy.global_position)
+		else:
+			var players = get_tree().get_nodes_in_group("player")
+			if not players.is_empty():
+				var player = players[0]
+				if is_instance_valid(player):
+					shootingtarget = player
+					look_at_with_limits(player.global_position)
+	
 
 
 func look_at_with_limits(target_position: Vector2) -> void:
 	if not is_instance_valid(guns):
 		return
 
-	# Vector from gun to target
 	var direction = (target_position - guns.global_position).normalized()
 	var angle = direction.angle()
 
-	# Determine if target is to the left or right
 	is_flipped = (target_position.x < global_position.x)
 	guns.flip_h = is_flipped
 
-	# If flipped, mirror the angle horizontally
 	if is_flipped:
 		angle = PI - angle
-		# You might also need to negate for correct sprite pivot
 		angle = -angle
 
-	# Clamp the angle to allowed gun rotation limits
 	var min_angle = deg_to_rad(min_rotation_degrees)
 	var max_angle = deg_to_rad(max_rotation_degrees)
 
-	# Normalize angle to ensure clamping behaves correctly
 	angle = wrapf(angle, -PI, PI)
 	var clamped_angle = clamp(angle, min_angle, max_angle)
 
 	guns.rotation = clamped_angle
-
-
-
-
 
 func nearest_thing(things: Array, i) -> Node:
 	if things.is_empty() or i >= things.size():

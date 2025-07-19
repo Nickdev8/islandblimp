@@ -30,8 +30,6 @@ func _on_body_entered(body: Node) -> void:
 			targets.append_array(get_tree().get_nodes_in_group("Core"))
 		else:
 			targets = get_tree().get_nodes_in_group("Enemys")
-		if from_enimi:
-			print(str(targets.has(body))+ str(body.has_method("takedamage")))
 		if targets.has(body) and body.has_method("takedamage"):
 			body.takedamage(damage)
 			queue_free()

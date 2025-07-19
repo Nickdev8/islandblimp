@@ -19,6 +19,8 @@ var companions
 var companionsleader: Node2D
 func _process(delta: float) -> void:
 	if !companionsleader: setcompanionleader()
+	if !coreIsAlive:
+		print("YOUR DEAD")
 	
 func setcompanionleader():
 	companions = get_tree().get_nodes_in_group("companions")
