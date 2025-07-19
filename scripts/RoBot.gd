@@ -116,7 +116,7 @@ func animationsmanager() -> void:
 		if is_walking == is_walking_preframe:
 			if walkanimation.time_left <= 0:
 				walkanimation.start()
-		
+				
 		if is_walking_preframe != is_walking:
 			walkanimation.stop()
 
