@@ -100,36 +100,35 @@ z_as_relative = false
 y_sort_enabled = true
 
 [node name="BOT0" parent="characters" instance=ExtResource("5_gik3h")]
-gunnumber = 38
 
 [node name="BOT1" parent="characters" instance=ExtResource("5_gik3h")]
 StartHealth = 15
-gunnumber = 2
+gunnumber = 1
 activeAnimator = 1
 
 [node name="BOT2" parent="characters" instance=ExtResource("5_gik3h")]
 StartHealth = 18
-gunnumber = 42
+gunnumber = 2
 activeAnimator = 2
 
 [node name="BOT3" parent="characters" instance=ExtResource("5_gik3h")]
 StartHealth = 13
-gunnumber = 10
+gunnumber = 3
 activeAnimator = 3
 
 [node name="BOT4" parent="characters" instance=ExtResource("5_gik3h")]
 StartHealth = 13
-gunnumber = 10
+gunnumber = 4
 activeAnimator = 4
 
 [node name="BOT5" parent="characters" instance=ExtResource("5_gik3h")]
 StartHealth = 13
-gunnumber = 10
+gunnumber = 5
 activeAnimator = 5
 
 [node name="BOT6" parent="characters" instance=ExtResource("5_gik3h")]
 StartHealth = 13
-gunnumber = 10
+gunnumber = 15
 activeAnimator = 6
 
 [node name="OldMan" parent="characters" instance=ExtResource("5_sgg8r")]

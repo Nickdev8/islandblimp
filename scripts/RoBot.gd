@@ -23,14 +23,17 @@ signal health_changed(send_Health: int, send_SNAP_VALUE: int)
 signal health_start(send_Start_Health: int, send_SNAP_VALUE: int)
 
 const botstats = {
-	0: {"speed": 30, "first": Vector2(3, -7), "second": Vector2(3, -6)},
-	1: {"speed": 50, "first": Vector2(2, -7), "second": Vector2(2, -6)},
-	2: {"speed": 40, "first": Vector2(3, -8), "second": Vector2(3, -7)},
-	3: {"speed": 50, "first": Vector2(2, -7), "second": Vector2(2, -6)},
-	4: {"speed": 40, "first": Vector2(3, -7), "second": Vector2(3, -6)},
-	5: {"speed": 30, "first": Vector2(3, -8), "second": Vector2(3, -7)},
-	6: {"speed": 30, "first": Vector2(3, -8), "second": Vector2(3, -7)},
+	0: {"speed": 30},
+	1: {"speed": 50},
+	2: {"speed": 40},
+	3: {"speed": 50},
+	4: {"speed": 40},
+	5: {"speed": 30},
+	6: {"speed": 30},
 }
+
+var orininalgunpos
+var orininalgunoff
 
 var is_alive: bool
 var is_walking: bool
@@ -60,6 +63,8 @@ func _ready() -> void:
 	bot_id = RoBot.next_bot_id
 	RoBot.next_bot_id += 1
 	RoBot.all_bots.append(self)
+	orininalgunpos = guns.position
+	orininalgunoff = guns.offset
 	
 	if bot_sprites_container == null:
 		push_error("RoBot: could not find a child node called 'BotSprites' — make sure you added it under this scene!")
@@ -69,7 +74,6 @@ func _ready() -> void:
 			if child is AnimatedSprite2D:
 				animsprites.append(child)
 	
-	add_to_group("Bots")
 	Health = StartHealth
 	is_alive = Health > 0
 	target = null
@@ -90,13 +94,15 @@ func _physics_process(_delta: float) -> void:
 			navigation_agent_2d.velocity = nav_velocity
 			is_walking_preframe = is_walking
 			is_walking = !navigation_agent_2d.is_target_reached()
-			is_flipped = nav_velocity.x < 0
+			if is_walking:
+				is_flipped = nav_velocity.x < 0
 
 func _process(_delta: float) -> void:
 	animationsmanager()
 	gunmanager()
 	check_health()
 	targetlogic()
+	shootintargetlogic()
 
 func animationsmanager() -> void:
 	# First hide all sprites if they exist
@@ -130,18 +136,20 @@ func gunmanager() -> void:
 		var current_sprite = animsprites[activeAnimator]
 		if is_instance_valid(current_sprite):
 			var frame = current_sprite.frame
+			
+			orininalgunpos
+			orininalgunoff
+			
 			if frame in [0, 1, 2]:
-				guns.set_offset(Vector2(0, botstats[activeAnimator]["first"].y))
-				if is_flipped: 
-					guns.position.x = botstats[activeAnimator]["first"].x * -1
-				else: 
-					guns.position.x = botstats[activeAnimator]["first"].x * 1
+				guns.position.y = orininalgunpos.y
 			else:
-				guns.set_offset(Vector2(0, botstats[activeAnimator]["second"].y))
-				if is_flipped: 
-					guns.position.x = botstats[activeAnimator]["second"].x * -1
-				else: 
-					guns.position.x = botstats[activeAnimator]["second"].x * 1
+				guns.position.y = orininalgunpos.y-1
+			if is_flipped:
+				guns.position.x = orininalgunpos.x * -1
+				guns.offset.x = orininalgunoff.x * -1
+			else:
+				guns.position.x = orininalgunpos.x * 1
+				guns.offset.x = orininalgunoff.x * 1
 			
 			guns.visible = not is_walking
 			guns.set_frame(gunnumber)
@@ -195,7 +203,7 @@ func targetlogic() -> void:
 	if !is_alive:
 		group_name = "Charger"
 	else:
-		group_name = "Seat" 
+		group_name = "Seat"
 		healing = false
 
 	var potential_targets = get_tree().get_nodes_in_group(group_name)
@@ -216,27 +224,45 @@ func targetlogic() -> void:
 		navigation_agent_2d.target_position = Vector2(target.global_position.x, target.global_position.y + 2)
 
 func shootintargetlogic() -> void:
-	var players = get_tree().get_nodes_in_group("player")
-	if not players.is_empty():
-		var player = players[0]
-		if is_instance_valid(player):
-			shootingtarget = player
-			look_at_with_limits(player.global_position)
-	
+	if target != null:
+		if is_instance_valid(target):
+			shootingtarget = target
+			look_at_with_limits(target.global_position)
+
+
+
+
 func look_at_with_limits(target_position: Vector2) -> void:
 	if not is_instance_valid(guns):
 		return
-		
-	var direction = (target_position - global_position).normalized()
-	var target_angle = direction.angle()
 
+	# Vector from gun to target
+	var direction = (target_position - guns.global_position).normalized()
+	var angle = direction.angle()
+
+	# Determine if target is to the left or right
+	is_flipped = (target_position.x < global_position.x)
+	guns.flip_h = is_flipped
+
+	# If flipped, mirror the angle horizontally
 	if is_flipped:
-		target_angle = 180 - target_angle
+		angle = PI - angle
+		# You might also need to negate for correct sprite pivot
+		angle = -angle
 
-	var min_rotation = deg_to_rad(min_rotation_degrees)
-	var max_rotation = deg_to_rad(max_rotation_degrees)
-	var clamped_angle = clamp(target_angle, min_rotation, max_rotation)
+	# Clamp the angle to allowed gun rotation limits
+	var min_angle = deg_to_rad(min_rotation_degrees)
+	var max_angle = deg_to_rad(max_rotation_degrees)
+
+	# Normalize angle to ensure clamping behaves correctly
+	angle = wrapf(angle, -PI, PI)
+	var clamped_angle = clamp(angle, min_angle, max_angle)
+
 	guns.rotation = clamped_angle
+
+
+
+
 
 func nearest_thing(things: Array, i) -> Node:
 	if things.is_empty() or i >= things.size():

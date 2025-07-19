@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://bvy1sdivrvwew" path="res://scripts/energysystem.gd" id="1_nwdum"]
 
 [node name="energyBar" type="Control"]
+z_index = 4096
 layout_mode = 3
 anchors_preset = 8
 anchor_left = 0.5

@@ -7,6 +7,7 @@ extends Node2D
 @export var accuracy: float = 0.1
 @export var projectile_speed: float = 300.0
 @export var projectile_damage: int = 10
+@export var projectile_sprite: int = 0
 @export var see_distance: float = 100.0
 @export var projectile_max_distance: float = 1000.0
 
@@ -50,6 +51,7 @@ func _shoot_at(target: Node2D) -> void:
 	proj.from_enimi    = is_Enemys
 	proj.scan          = true
 	proj.global_position = global_position
+	proj.spriteindex = projectile_sprite
 
 	var dir = (target.global_position - global_position).normalized()
 	dir += Vector2(

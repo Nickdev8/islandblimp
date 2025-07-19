@@ -31,6 +31,7 @@ func _set_max_health(val: int) -> void:
 
 func _set_current_health(val: int) -> void:
 	current_health = clamp(val, 0, start_health)
+	print(current_health)
 	_update_bar()
 
 

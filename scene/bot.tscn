@@ -1123,8 +1123,8 @@ radius = 6.0
 z_index = 25
 z_as_relative = false
 y_sort_enabled = true
-collision_layer = 0
-collision_mask = 3
+collision_layer = 16
+collision_mask = 0
 motion_mode = 1
 wall_min_slide_angle = 0.0
 script = ExtResource("1_k20c1")
@@ -1187,11 +1187,11 @@ autoplay = "idle"
 offset = Vector2(0, -8)
 
 [node name="guns" type="AnimatedSprite2D" parent="."]
-visible = false
-position = Vector2(-6, 0)
+z_index = 1
+position = Vector2(-4, -4)
 sprite_frames = SubResource("SpriteFrames_j21ve")
 frame_progress = 0.241104
-offset = Vector2(8, -7)
+offset = Vector2(4, -4)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, -2)

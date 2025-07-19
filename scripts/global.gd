@@ -1,5 +1,6 @@
 extends Node
 
+var coreIsAlive: bool = true
 var islandSize: Vector2i = Vector2i(128, 128)
 
 var gunDictionary: Dictionary = {

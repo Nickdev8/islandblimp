@@ -1,7 +1,8 @@
-[gd_scene load_steps=11 format=3 uid="uid://dksk7ssdnwi23"]
+[gd_scene load_steps=12 format=3 uid="uid://dksk7ssdnwi23"]
 
 [ext_resource type="Texture2D" uid="uid://dqipstly7gbkq" path="res://assets/CORE.png" id="1_15i82"]
-[ext_resource type="Script" uid="uid://b0rj8ajfrcevm" path="res://scripts/Core.gd" id="2_3teb3"]
+[ext_resource type="Script" uid="uid://c6gghcdkdejhl" path="res://scripts/core.gd" id="1_mso3m"]
+[ext_resource type="PackedScene" uid="uid://b2nna38iljd3c" path="res://scene/energy_bar.tscn" id="3_mso3m"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_hkf0p"]
 atlas = ExtResource("1_15i82")
@@ -60,9 +61,12 @@ size = Vector2(20, 8)
 z_index = 25
 z_as_relative = false
 y_sort_enabled = true
+script = ExtResource("1_mso3m")
 
 [node name="StaticBody2D" type="StaticBody2D" parent="."]
 position = Vector2(0, 10)
+collision_layer = 8
+collision_mask = 8
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="StaticBody2D"]
 y_sort_enabled = true
@@ -70,7 +74,6 @@ sprite_frames = SubResource("SpriteFrames_ltgcb")
 autoplay = "default"
 frame_progress = 0.990484
 offset = Vector2(0, -14)
-script = ExtResource("2_3teb3")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D"]
 position = Vector2(0, -6)
@@ -82,3 +85,7 @@ radius = 1.0
 vertices = PackedVector2Array(13, 4, 13, -4, -13, -4, -13, 4, 13, 4)
 affect_navigation_mesh = true
 carve_navigation_mesh = true
+
+[node name="energyBar" parent="." instance=ExtResource("3_mso3m")]
+offset_top = 10.0
+offset_bottom = 10.0

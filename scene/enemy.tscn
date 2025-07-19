@@ -134,7 +134,6 @@ projectile_damage = 2
 sprite_frames = SubResource("SpriteFrames_nxujm")
 animation = &"idle"
 autoplay = "walk"
-frame_progress = 0.397559
 offset = Vector2(0, -3)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
