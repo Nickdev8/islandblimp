@@ -12,7 +12,7 @@ config_version=5
 
 config/name="Blipstorm "
 config/description="surviving on a floating island and getting resources to defend against floating enemies that want to destroy your core. The core is what keeps your island afloat. you can automate the defense to some point with a miner and a.converter"
-run/main_scene="res://scene/main.tscn"
+run/main_scene="uid://c4m88g74vrgeo"
 config/features=PackedStringArray("4.4", "GL Compatibility")
 boot_splash/show_image=false
 boot_splash/fullsize=false

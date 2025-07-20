@@ -155,10 +155,7 @@ unique_name_in_owner = true
 z_as_relative = false
 y_sort_enabled = true
 script = ExtResource("9_hesif")
-grass_threshold = 0.4
 rocks_threshold = 0.7
-hill_count = 4
-grass_spawn_chance = 5
 
 [node name="BotItems" type="TileMapLayer" parent="island/Tilemaps"]
 unique_name_in_owner = true

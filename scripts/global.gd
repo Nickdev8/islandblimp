@@ -2,6 +2,7 @@ extends Node
 
 var coreIsAlive: bool = true
 var islandSize: Vector2i = Vector2i(128, 128)
+var difficulty: int = 0
 
 var gunDictionary: Dictionary = {
 ##"index" 	= [lvl, shootingspeed, type of projectile]

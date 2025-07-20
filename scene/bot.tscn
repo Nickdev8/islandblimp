@@ -1131,7 +1131,6 @@ script = ExtResource("1_k20c1")
 StartHealth = 14
 
 [node name="shooter" parent="." instance=ExtResource("2_aef4s")]
-projectile_damage = 5
 
 [node name="BotSprites" type="Node2D" parent="."]
 

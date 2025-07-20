@@ -127,8 +127,6 @@ wall_min_slide_angle = 0.0
 script = ExtResource("1_r4y6k")
 
 [node name="shooter" parent="." instance=ExtResource("2_yvcfn")]
-is_Enemys = true
-projectile_damage = 2
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 sprite_frames = SubResource("SpriteFrames_nxujm")
