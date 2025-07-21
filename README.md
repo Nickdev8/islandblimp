@@ -3,7 +3,7 @@
 [![en](https://img.shields.io/badge/lang-en-red.svg)](README.md)
 [![Play Game](https://img.shields.io/badge/Play-Game-brightgreen?style=flat-square&logo=gamepad&logoColor=white)](https://nickdev8.github.io/)
 
----
+https://github.com/user-attachments/assets/20b464e3-a9f9-401b-a52d-c259b3a9ab51
 
 ## What is this?
 Welcome to **Blipstorm**!  
@@ -27,11 +27,13 @@ Also, I wanted to mess around with Godot 4 and Aseprite importers. And island ge
 - [ ] Smarter birds (maybe too smart?)
 - [ ] Move demo off GitHub Pages (eventually)
 
+<img width="601" height="382" alt="image" src="https://github.com/user-attachments/assets/0641e925-2e72-455e-b217-df8595ba20d5" />
+
 ## Play the Demo
 Try it out on GitHub Pages (for now):  
 [Play Blipstorm](https://nickdev8.github.io/)
 
 ---
 
-*Made with ☕, Godot 4, and a (╯°□°）╯︵ ┻━┻
+*Made with (╯°□°）╯︵ ┻━┻, Godot 4
 
