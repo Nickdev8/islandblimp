@@ -37,3 +37,5 @@ Try it out on GitHub Pages (for now):
 
 *Made with (╯°□°）╯︵ ┻━┻, Godot 4
 
+
+[Random Island Script](https://github.com/Nickdev8/islandblimp/blob/main/scripts/timemapislandgenarator.gd)
