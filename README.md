@@ -38,7 +38,7 @@ Try it out on GitHub Pages (for now):
 *Made with (╯°□°）╯︵ ┻━┻, Godot 4
 
 
-[Random Island Script](https://github.com/Nickdev8/islandblimp/blob/main/scripts/timemapislandgenarator.gd)
+[Random Island Script](https://github.com/Nickdev8/islandblimp/blob/main/scripts/world/island_generator.gd)
 <div align="center">
   <a href="https://shipwrecked.hackclub.com/?t=ghrm" target="_blank">
     <img src="https://hc-cdn.hel1.your-objectstorage.com/s/v3/739361f1d440b17fc9e2f74e49fc185d86cbec14_badge.png" 

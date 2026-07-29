@@ -1,6 +1,6 @@
 [gd_scene load_steps=41 format=3 uid="uid://b6axn4fx8y26r"]
 
-[ext_resource type="Script" uid="uid://dexumf4xvl571" path="res://scripts/OldmanPlayer.gd" id="1_acl4s"]
+[ext_resource type="Script" uid="uid://dexumf4xvl571" path="res://scripts/actors/player.gd" id="1_acl4s"]
 [ext_resource type="Texture2D" uid="uid://pea3neq3gbuw" path="res://assets/old_man.png" id="2_0mgay"]
 [ext_resource type="PackedScene" uid="uid://dr72leak5qos7" path="res://scene/shadow.tscn" id="3_2imsi"]
 

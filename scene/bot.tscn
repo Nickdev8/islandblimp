@@ -1,6 +1,6 @@
 [gd_scene load_steps=133 format=3 uid="uid://bam1m8moww5xl"]
 
-[ext_resource type="Script" uid="uid://dmsmw0g4hrps7" path="res://scripts/RoBot.gd" id="1_k20c1"]
+[ext_resource type="Script" uid="uid://dmsmw0g4hrps7" path="res://scripts/actors/robot.gd" id="1_k20c1"]
 [ext_resource type="PackedScene" uid="uid://dbrc2mxvhy6hk" path="res://scene/shooter.tscn" id="2_aef4s"]
 [ext_resource type="Texture2D" uid="uid://c4hcxmjdg5nxh" path="res://assets/robotsheet.png" id="2_q7b54"]
 [ext_resource type="Texture2D" uid="uid://ciievjswfigbr" path="res://assets/gunpack.png" id="4_2687w"]

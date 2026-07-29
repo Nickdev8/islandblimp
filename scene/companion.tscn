@@ -1,7 +1,7 @@
 [gd_scene load_steps=20 format=3 uid="uid://dk4k2n63jkkf"]
 
 [ext_resource type="Texture2D" uid="uid://b58xcj8bsedfx" path="res://assets/Chicken_Sprite_Sheet.png" id="1_cyk6s"]
-[ext_resource type="Script" uid="uid://5o322vnlvvom" path="res://scripts/companion.gd" id="1_wuydb"]
+[ext_resource type="Script" uid="uid://5o322vnlvvom" path="res://scripts/actors/companion.gd" id="1_wuydb"]
 [ext_resource type="Texture2D" uid="uid://c1yb74x4w8qlk" path="res://assets/feather.png" id="3_6aun5"]
 [ext_resource type="PackedScene" uid="uid://dr72leak5qos7" path="res://scene/shadow.tscn" id="4_vb02r"]
 

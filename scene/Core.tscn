@@ -1,7 +1,7 @@
 [gd_scene load_steps=12 format=3 uid="uid://dksk7ssdnwi23"]
 
 [ext_resource type="Texture2D" uid="uid://dqipstly7gbkq" path="res://assets/CORE.png" id="1_15i82"]
-[ext_resource type="Script" uid="uid://c6gghcdkdejhl" path="res://scripts/core.gd" id="1_mso3m"]
+[ext_resource type="Script" uid="uid://c6gghcdkdejhl" path="res://scripts/actors/core.gd" id="1_mso3m"]
 [ext_resource type="PackedScene" uid="uid://b2nna38iljd3c" path="res://scene/energy_bar.tscn" id="3_mso3m"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_hkf0p"]

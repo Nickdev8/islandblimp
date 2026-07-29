@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://dsp4wdubx4r2k"]
 
 [ext_resource type="Texture2D" uid="uid://bvyxtvbafnb11" path="res://assets/chargerset.png" id="2_3wkbc"]
-[ext_resource type="Script" uid="uid://pqbligwl4mhi" path="res://scripts/bot_charger.gd" id="2_ybhcl"]
+[ext_resource type="Script" uid="uid://pqbligwl4mhi" path="res://scripts/interactables/bot_charger.gd" id="2_ybhcl"]
 
 [node name="Node2D" type="Node2D" groups=["Charger"]]
 script = ExtResource("2_ybhcl")

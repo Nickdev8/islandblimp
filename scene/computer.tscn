@@ -1,6 +1,6 @@
 [gd_scene load_steps=10 format=3 uid="uid://dxhinlcmr77og"]
 
-[ext_resource type="Script" uid="uid://buh20fpvtsdd6" path="res://scripts/computer.gd" id="1_33jy6"]
+[ext_resource type="Script" uid="uid://buh20fpvtsdd6" path="res://scripts/interactables/computer.gd" id="1_33jy6"]
 [ext_resource type="Texture2D" uid="uid://cot80l1ntux2n" path="res://assets/computer.png" id="2_tdtlj"]
 [ext_resource type="Texture2D" uid="uid://brgbryjwgy4w5" path="res://assets/tiles_packed.png" id="4_kwj81"]
 

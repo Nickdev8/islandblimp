@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://dbrc2mxvhy6hk"]
 
-[ext_resource type="Script" uid="uid://bycikpcid26gq" path="res://scripts/schootscript.gd" id="1_gh8jo"]
+[ext_resource type="Script" uid="uid://bycikpcid26gq" path="res://scripts/combat/shooter.gd" id="1_gh8jo"]
 [ext_resource type="PackedScene" uid="uid://bldtdb7x1k1cc" path="res://scene/projectile.tscn" id="2_yjy7u"]
 
 [node name="shooter" type="Node2D"]

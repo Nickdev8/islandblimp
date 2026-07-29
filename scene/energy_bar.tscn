@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://b2nna38iljd3c"]
 
-[ext_resource type="Script" uid="uid://bvy1sdivrvwew" path="res://scripts/energysystem.gd" id="1_nwdum"]
+[ext_resource type="Script" uid="uid://bvy1sdivrvwew" path="res://scripts/ui/health_bar.gd" id="1_nwdum"]
 
 [node name="energyBar" type="Control"]
 z_index = 4096
