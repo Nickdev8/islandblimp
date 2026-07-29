@@ -11,6 +11,12 @@ extends Node2D
 @export var hill_count: int = 5                     # Number of hills to generate
 @export var grass_spawn_chance: int = 10            # Chance for grass to spawn (1 in X)
 
+# Random maps occasionally do not contain enough suitable space for every hill
+# and object. Keep retries bounded so an unlucky seed never blocks the game.
+const MAX_MAP_ATTEMPTS := 3
+const MAX_HILL_PLACEMENT_ATTEMPTS := 64
+const MAX_SCENE_PLACEMENT_ATTEMPTS := 128
+
 # Layer References
 @onready var bottom_items_layer: TileMapLayer = %BotItems
 @onready var hill_layer: TileMapLayer = %hill
@@ -23,6 +29,7 @@ var core_tile_position: Vector2i = Vector2i.ZERO
 var positions_to_set: Array[Vector2i] = []
 var positions_id: Array[int] = []
 var positions_to_null: Array[Vector2i] = []
+var reserved_scene_positions: Dictionary = {}
 
 const TILE_ATLAS: Dictionary = {
 	"null" : Vector2i(-1, -1),
@@ -114,40 +121,38 @@ const NOISE_PARAMETERS = {
 	"cellular_return_type": 1,
 }
 
-func _ready():
+func _ready() -> void:
 	generate_map_with_timeout()
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("jump"):
 		generate_map_with_timeout()
 
-func generate_map_with_timeout():
+func generate_map_with_timeout() -> void:
 	var start_time = Time.get_ticks_msec()
-	var success = false
-	
-	while not success:
-		# Clear previous generation attempt
-		bottom_items_layer.clear()
-		hill_layer.clear()
-		ground_decoration_layer.clear()
-		grass_layer.clear()
-		underside_layer.clear()
-		
-		core_tile_position = Vector2i.ZERO
-		positions_to_set = []
-		positions_id = []
-		positions_to_null = []
-		
-		# Attempt generation
-		generate_map()
-		
-		# Check if generation took too long
-		if Time.get_ticks_msec() - start_time < 500:
-			success = true
-		else:
-			print("Generation took too long, retrying...")
 
-func generate_map():
+	for attempt in range(MAX_MAP_ATTEMPTS):
+		_reset_generation_state()
+		if generate_map():
+			print("Island generated in %d ms (attempt %d)." % [Time.get_ticks_msec() - start_time, attempt + 1])
+			return
+
+	push_warning("Island generation could not find a complete random layout; using the safe fallback map.")
+	_generate_fallback_map()
+
+func _reset_generation_state() -> void:
+	bottom_items_layer.clear()
+	hill_layer.clear()
+	ground_decoration_layer.clear()
+	grass_layer.clear()
+	underside_layer.clear()
+	core_tile_position = Vector2i.ZERO
+	positions_to_set.clear()
+	positions_id.clear()
+	positions_to_null.clear()
+	reserved_scene_positions.clear()
+
+func generate_map() -> bool:
 	var noise = create_noise(randf_range(1, 10000000))
 	var grass_noise = create_noise(randf_range(1, 10000000))
 	
@@ -174,20 +179,33 @@ func generate_map():
 	apply_second_layer_filters()
 	
 	var random_core_num = randi_range(0, hill_count - 1)
-	for hill_index in hill_count:
+	for hill_index in range(hill_count):
 		var hill_placed = false
-		while not hill_placed:
+		for placement_attempt in range(MAX_HILL_PLACEMENT_ATTEMPTS):
 			hill_placed = generate_hill(hill_index, hill_count, random_core_num)
+			if hill_placed:
+				break
+		if not hill_placed:
+			hill_placed = _find_hill_position(hill_index, hill_count, random_core_num)
+		if not hill_placed:
+			return false
 	
 	apply_hill_filters()
 	generate_grass_variations(grass_noise, center_offset)
 	apply_collision_filters()
 	
 	# Generate scenes/objects
-	generate_scene(1)  # Computer
-	for i in 7: generate_scene(2)  # Seats
-	for i in 7: generate_scene(4 + i)  # Chargers
-	for i in 10: generate_scene(4)  # Companions
+	if not generate_scene(1):  # Computer
+		return false
+	for i in range(7):
+		if not generate_scene(2):  # Seats
+			return false
+	for i in range(7):
+		if not generate_scene(4 + i):  # Chargers
+			return false
+	for i in range(10):
+		if not generate_scene(4):  # Companions
+			return false
 	
 	# Place core
 	bottom_items_layer.set_cell(core_tile_position, 1, Vector2i.ZERO, 3)
@@ -195,7 +213,23 @@ func generate_map():
 	# Place all other items
 	for i in range(positions_to_set.size()):
 		bottom_items_layer.set_cell(positions_to_set[i], 1, Vector2i.ZERO, positions_id[i])
-		ground_decoration_layer.set_cell(positions_to_null[i], 0, TILE_ATLAS["null"])
+	for position in positions_to_null:
+		ground_decoration_layer.set_cell(position, 0, TILE_ATLAS["null"])
+
+	return true
+
+func _generate_fallback_map() -> void:
+	_reset_generation_state()
+	var center_offset = Vector2i(Global.islandSize.x / 2, Global.islandSize.y / 2)
+	for x in range(Global.islandSize.x):
+		for y in range(Global.islandSize.y):
+			var position = Vector2i(x - center_offset.x, y - center_offset.y)
+			if position.length() <= 40.0:
+				grass_layer.set_cell(position, 0, TILE_ATLAS["grass"])
+
+	apply_second_layer_filters()
+	core_tile_position = Vector2i.ZERO
+	bottom_items_layer.set_cell(core_tile_position, 1, Vector2i.ZERO, 3)
 
 func create_noise(seed_value: int) -> FastNoiseLite:
 	var noise = FastNoiseLite.new()
@@ -222,13 +256,14 @@ func configure_noise(noise: FastNoiseLite) -> void:
 	noise.cellular_jitter = NOISE_PARAMETERS["cellular_jitter"]
 	noise.cellular_return_type = NOISE_PARAMETERS["cellular_return_type"]
 
-func generate_grass_variations(grass_noise: FastNoiseLite, center_offset: Vector2i):
+func generate_grass_variations(grass_noise: FastNoiseLite, center_offset: Vector2i) -> void:
+	grass_noise.set_frequency(0.06)
 	for x in range(Global.islandSize.x):
 		for y in range(Global.islandSize.y):
-			grass_noise.set_frequency(0.06)
 			var noise_value = grass_noise.get_noise_2d(x + 1000, y)
 			grass_noise.set_frequency(0.08)
 			var short_grass_noise_value = grass_noise.get_noise_2d(x + 2000, y)
+			grass_noise.set_frequency(0.06)
 			
 			var set_cell = Vector2i(x - Global.islandSize.x/2, y - Global.islandSize.y/2)
 			var set_cell_left = Vector2i(x - Global.islandSize.x/2 - 1, y - Global.islandSize.y/2)
@@ -259,46 +294,53 @@ func generate_grass_variations(grass_noise: FastNoiseLite, center_offset: Vector
 							else:
 								ground_decoration_layer.set_cell(set_cell, 0, TILE_ATLAS["stone2"])
 
-func generate_scene(scene_id: int):
-	var placed = false
-	while not placed:
+func generate_scene(scene_id: int) -> bool:
+	for placement_attempt in range(MAX_SCENE_PLACEMENT_ATTEMPTS):
 		var x = randi_range(0, Global.islandSize.x)
 		var y = randi_range(0, Global.islandSize.y)
 		var base_pos = Vector2i(x - Global.islandSize.x / 2, y - Global.islandSize.y / 2)
-		
-		var positions = []
-		for dy in range(-1, 3):
-			for dx in range(-1, 3):
-				positions.append(base_pos + Vector2i(dx, dy))
-		
-		var valid_position = true
-		
-		# Check all positions are valid
-		for pos in positions:
-			if (grass_layer.get_cell_atlas_coords(pos) != TILE_ATLAS["grass"] or
-				bottom_items_layer.get_cell_atlas_coords(pos) != TILE_ATLAS["null"] or
-				ground_decoration_layer.get_cell_atlas_coords(pos) != TILE_ATLAS["null"] or
-				hill_layer.get_cell_atlas_coords(pos) != TILE_ATLAS["null"]):
-				valid_position = false
-				break
-		
-		if valid_position:
-			bottom_items_layer.set_cell(base_pos, 1, Vector2i.ZERO, scene_id)
-			ground_decoration_layer.set_cell(base_pos, 0, TILE_ATLAS["null"])
-			positions_to_set.append(base_pos)
-			positions_id.append(scene_id)
-			positions_to_null.append(base_pos)
-			
-			# Add surrounding positions to null list
-			for dy in range(0, 2):
-				for dx in range(0, 2):
-					positions_to_null.append(base_pos + Vector2i(dx, dy))
-			
-			placed = true
+		if _try_place_scene(scene_id, base_pos):
+			return true
 
-func generate_hill(hill_index: int, total_hills: int, random_core_num: int) -> bool:
-	var x_pos = randi_range(0, Global.islandSize.x)
-	var y_pos = randi_range(0, Global.islandSize.y)
+	for y in range(Global.islandSize.y):
+		for x in range(Global.islandSize.x):
+			var base_pos = Vector2i(x - Global.islandSize.x / 2, y - Global.islandSize.y / 2)
+			if _try_place_scene(scene_id, base_pos):
+				return true
+
+	return false
+
+func _try_place_scene(scene_id: int, base_pos: Vector2i) -> bool:
+	var positions: Array[Vector2i] = []
+	for dy in range(-1, 3):
+		for dx in range(-1, 3):
+			positions.append(base_pos + Vector2i(dx, dy))
+
+	for position in positions:
+		if (not is_grass(grass_layer.get_cell_atlas_coords(position)) or
+			reserved_scene_positions.has(position) or
+			hill_layer.get_cell_atlas_coords(position) != TILE_ATLAS["null"]):
+			return false
+
+	bottom_items_layer.set_cell(base_pos, 1, Vector2i.ZERO, scene_id)
+	ground_decoration_layer.set_cell(base_pos, 0, TILE_ATLAS["null"])
+	positions_to_set.append(base_pos)
+	positions_id.append(scene_id)
+	for position in positions:
+		reserved_scene_positions[position] = true
+		positions_to_null.append(position)
+	return true
+
+func _find_hill_position(hill_index: int, total_hills: int, random_core_num: int) -> bool:
+	for y in range(Global.islandSize.y - hill_size.y):
+		for x in range(Global.islandSize.x - hill_size.x):
+			if generate_hill(hill_index, total_hills, random_core_num, Vector2i(x, y)):
+				return true
+	return false
+
+func generate_hill(hill_index: int, total_hills: int, random_core_num: int, origin: Vector2i = Vector2i(-1, -1)) -> bool:
+	var x_pos = origin.x if origin.x >= 0 else randi_range(0, Global.islandSize.x)
+	var y_pos = origin.y if origin.y >= 0 else randi_range(0, Global.islandSize.y)
 	var all_on_grass = true
 	var hill_positions: Array[Vector2i] = []
 	var temp_core_pos: Vector2i = Vector2i.ZERO
