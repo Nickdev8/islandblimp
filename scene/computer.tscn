@@ -45,7 +45,7 @@ size = Vector2(20, 8)
 
 [node name="Node2D" type="Node2D"]
 
-[node name="computer" type="StaticBody2D" parent="."]
+[node name="computer" type="StaticBody2D" parent="." groups=["Computers"]]
 z_index = 25
 z_as_relative = false
 y_sort_enabled = true

@@ -55,9 +55,20 @@ const compstats = {
 	0: {"speed": 40},
 }
 
+const CLANKER_YIELD_DISTANCE := 28.0
+const CLANKER_YIELD_STEP := 48.0
+
 func _ready() -> void:
-	_on_changestate_timeout()
 	followleader = randi_range(0,1) == 1
+	call_deferred("_begin_wandering")
+
+func _begin_wandering() -> void:
+	# TileMap scene instances can enter before the generated map has settled.
+	# Pick a real grass cell afterwards instead of inheriting the scene origin.
+	randpos = randomposonmap(true)
+	if randpos != Vector2.ZERO:
+		global_position = randpos
+	_on_changestate_timeout()
 	
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
@@ -100,15 +111,28 @@ func targetlogic():
 	var core: Node2D
 	var current_sprite = animsprites[activeAnimator]
 	
-	if get_tree().get_nodes_in_group("player").is_empty() or get_tree().get_nodes_in_group("Core").is_empty() or get_tree().get_nodes_in_group("Bots").is_empty():
+	if get_tree().get_nodes_in_group("player").is_empty() or get_tree().get_nodes_in_group("Core").is_empty():
 		return
 	
 	player = get_tree().get_nodes_in_group("player")[0]
 	core = get_tree().get_nodes_in_group("Core")[0]
 	
 	var deadbot = isthereadeadbot()
+	var yielding_clanker := _nearby_moving_clanker()
 	
-	if leader != self && followleader:
+	# Clankers have right of way while they are travelling to defend the core.
+	# Chickens briefly step out of their route instead of blocking a defender.
+	if is_instance_valid(yielding_clanker):
+		var away := global_position - yielding_clanker.global_position
+		if away.length_squared() < 0.01:
+			away = -yielding_clanker.velocity
+		if away.length_squared() < 0.01:
+			away = Vector2.RIGHT
+		current_target_pos = global_position + away.normalized() * CLANKER_YIELD_STEP
+		navigation_agent_2d.target_desired_distance = 4
+		changestate.wait_time = 1
+		anim = "walk"
+	elif leader != self && followleader:
 		if leader:
 			current_target_pos = leader.global_position
 			navigation_agent_2d.target_desired_distance = 24
@@ -177,7 +201,10 @@ func targetlogic():
 		else:
 			anim = "bobbing"
 	elif state == 7:
-		current_target_pos = nearestbot.global_position
+		if is_instance_valid(nearestbot):
+			current_target_pos = nearestbot.global_position
+		else:
+			current_target_pos = randpos
 		navigation_agent_2d.target_desired_distance = 32
 		changestate.wait_time = 15
 		if is_walking:
@@ -199,6 +226,21 @@ func targetlogic():
 	#if current_target_pos != Vector2.ZERO:
 	#else:
 	#	print("Target is null")
+
+func _nearby_moving_clanker() -> RoBot:
+	var closest: RoBot
+	var closest_distance := CLANKER_YIELD_DISTANCE
+	for candidate in get_tree().get_nodes_in_group("Bots"):
+		if not (candidate is RoBot) or not is_instance_valid(candidate):
+			continue
+		var clanker := candidate as RoBot
+		if not clanker.is_walking:
+			continue
+		var distance := global_position.distance_to(clanker.global_position)
+		if distance < closest_distance:
+			closest = clanker
+			closest_distance = distance
+	return closest
 
 func isthereadeadbot() -> RoBot:
 	var bots: Array = get_tree().get_nodes_in_group("Bots")
@@ -227,10 +269,10 @@ func isthereadeadbot() -> RoBot:
 
 
 func randomposonmap(walktograss: bool) -> Vector2:
-	bot_items = get_node("../../BotItems")
-	hill = get_node("../../hill")
-	stuff_on_ground = get_node("../../stuffOnGround")
-	grassLayer = get_node("../../grass")
+	bot_items = get_tree().root.find_child("BotItems", true, false) as TileMapLayer
+	hill = get_tree().root.find_child("hill", true, false) as TileMapLayer
+	stuff_on_ground = get_tree().root.find_child("stuffOnGround", true, false) as TileMapLayer
+	grassLayer = get_tree().root.find_child("grass", true, false) as TileMapLayer
 	
 	if !grassLayer or !hill or !stuff_on_ground or !bot_items:
 		print(grassLayer)
@@ -239,11 +281,7 @@ func randomposonmap(walktograss: bool) -> Vector2:
 		print(bot_items)
 		return Vector2.ZERO
 
-	var returnpos: Vector2 = Vector2.ZERO
-	var istherea = false
-	
-	while !istherea:
-		var is_valid = false
+	for attempt in range(128):
 		var x = randi_range(Global.islandSize.x/2 * -1, Global.islandSize.x/2)
 		var y = randi_range(Global.islandSize.y/2 * -1, Global.islandSize.y/2)
 		var setcell = Vector2i(x, y)
@@ -252,25 +290,12 @@ func randomposonmap(walktograss: bool) -> Vector2:
 		var me_hill = hill.get_cell_atlas_coords(setcell)
 		var me_stuffongorund = stuff_on_ground.get_cell_atlas_coords(setcell)
 		
-		if position.distance_to(Vector2(setcell.x * 16, setcell.y * 16)) < 128:
-			if me_grass == Dic["grass"]:
-				if me_grass != Dic["grass_collision_all"]:
-					if me_grass != Dic["grass_collision_navigation"]:
-						if me_hill == Dic["null"]:
-							if walktograss == true:
-								if me_stuffongorund == Dic["null"]:
-									is_valid = true
-							else:
-								if me_stuffongorund != Dic["null"]:
-									is_valid = true
-			
-		if is_valid:
-			returnpos = Vector2(setcell.x * 16, setcell.y * 16)
-			istherea = true
-		else:
-			istherea = false
+		var has_grass := me_grass != Dic["null"] and me_grass != Dic["grass_collision_all"] and me_grass != Dic["grass_collision_navigation"]
+		var valid_ground := has_grass and me_hill == Dic["null"]
+		if valid_ground and (not walktograss or me_stuffongorund == Dic["null"]):
+			return grassLayer.to_global(grassLayer.map_to_local(setcell))
 
-	return returnpos
+	return global_position
 
 func animationsmanager() -> void:
 	for sprite in animsprites:

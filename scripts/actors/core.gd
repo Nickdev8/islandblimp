@@ -9,6 +9,7 @@ signal health_start(send_Start_Health: int, send_SNAP_VALUE: int)
 func _ready() -> void:
 	Health = StartHealth
 	Global.coreIsAlive = Health > 0
+	emit_signal("health_start", StartHealth, SNAP_VALUE)
 
 func takedamage(DamageAmount: int) -> void:
 	Health -= DamageAmount

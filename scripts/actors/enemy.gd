@@ -3,6 +3,9 @@ class_name Enemy extends CharacterBody2D
 @export var StartHealth: int
 @export var SNAP_VALUE: int = 14
 @export var activeAnimator: int = 0 # randi_range(0,2)
+@export var contact_damage := 1
+@export var attack_interval := 1.0
+@export var speed_multiplier := 1.0
 
 @onready var animsprites: Array[AnimatedSprite2D] = [
 	$AnimatedSprite2D,
@@ -14,6 +17,7 @@ class_name Enemy extends CharacterBody2D
 @onready var walkanimation: Timer = $walkanimation
 @onready var gpu_particles_2d: GPUParticles2D = $GPUParticles2D
 @onready var particleWaitTimer: Timer = $particleWaitTimer
+@onready var shooter: ShootScript = $shooter
 
 signal health_changed(send_Health: int, send_SNAP_VALUE: int)
 signal health_start(send_Start_Health: int, send_SNAP_VALUE: int)
@@ -32,8 +36,15 @@ var started_walking: bool
 var nav_velocity: Vector2
 var Health: int
 var target: Node2D
+var _attack_cooldown := 0.0
 
 func _ready() -> void:
+	# Enemies pressure the defence line with slow, short-range shots before
+	# closing in for contact damage.
+	shooter.is_Enemys = true
+	shooter.see_distance = 56.0
+	shooter.set_shoot_interval(3.5)
+	shooter.projectile_damage = contact_damage
 	Health = StartHealth
 	is_alive = Health > 0
 	target = null
@@ -45,16 +56,17 @@ func _process(_delta: float) -> void:
 	animationsmanager()
 	check_health()
 	targetlogic()
+	_attack_cooldown = max(_attack_cooldown - _delta, 0.0)
+	if is_instance_valid(target) and global_position.distance_to(target.global_position) < 18.0 and _attack_cooldown <= 0.0 and target.has_method("takedamage"):
+		target.takedamage(contact_damage)
+		Global.log_event("Enemy hit %s for %d damage." % [target.name, contact_damage])
+		_attack_cooldown = attack_interval
 	
-func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("1"):
-		takedamage(1)
-
 func _physics_process(_delta: float) -> void:
 	if target:
 		scale = Vector2(1,1)
 		var dir = to_local(navigation_agent_2d.get_next_path_position()).normalized()
-		nav_velocity = dir * birbstats[activeAnimator]["speed"]
+		nav_velocity = dir * birbstats[activeAnimator]["speed"] * speed_multiplier
 		navigation_agent_2d.velocity = nav_velocity
 		is_walking_preframe = is_walking
 		is_walking = !navigation_agent_2d.is_target_reached()
@@ -82,13 +94,15 @@ func targetlogic():
 	#var player: Node
 	var core: Node
 	#get_tree().get_nodes_in_group("player").is_empty() or 
-	if get_tree().get_nodes_in_group("Core").is_empty() or get_tree().get_nodes_in_group("Bots").is_empty():
+	if get_tree().get_nodes_in_group("Core").is_empty():
 		return
 	
 	#player = get_tree().get_nodes_in_group("player")[0]
 	core = get_tree().get_nodes_in_group("Core")[0]
 
-	var dist_to_nearbot = global_position.distance_to(nearestbot.global_position)
+	var dist_to_nearbot := INF
+	if is_instance_valid(nearestbot):
+		dist_to_nearbot = global_position.distance_to(nearestbot.global_position)
 	#var dist_to_player = global_position.distance_to(player.global_position) - 8
 	var dist_to_core = global_position.distance_to(core.global_position) - 16
 
@@ -127,7 +141,7 @@ func check_health() -> void:
 	var was_alive = is_alive
 	is_alive = Health > 0
 	if is_alive != was_alive:
-		emit_signal("health_changed")
+		emit_signal("health_changed", Health, SNAP_VALUE)
 	if is_alive == false:
 		killme()
 		

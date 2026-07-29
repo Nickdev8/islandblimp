@@ -1,85 +1,72 @@
 extends Control
 
-# ——— the exports now use “: set = …” instead of setget ———
-@export var start_health:   int     = 10  : set = _set_max_health
-@export var current_health: int     = 10  : set = _set_current_health
-@export var offset:         Vector2 = Vector2.ZERO
-@export var padding:        int     = 1
+## World-space health bar shared by Clankers, enemies, and the core.
+## It uses a fixed pixel width so every bar stays centered under its entity,
+## while the fill accurately represents the entity's current health fraction.
+@export var below_entity_offset := 11.0
 
+const BAR_WIDTH := 24.0
+const BAR_HEIGHT := 3.0
+const BORDER := 1.0
+
+var start_health := 1
+var current_health := 1
 var background: ColorRect
-var green_bar:    ColorRect
-var red_bar:      ColorRect
+var missing_health: ColorRect
+var health_fill: ColorRect
 
 func _ready() -> void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_create_bar()
-	# initial sizing
-	background.size = Vector2(start_health + padding*2, 1 + padding*2)
-	_update_bar()
 	if get_parent():
-		get_parent().connect("health_start",   Callable(self, "_on_health_start"))
-		get_parent().connect("health_changed", Callable(self, "_on_health_changed"))
+		if get_parent().has_signal("health_start"):
+			get_parent().health_start.connect(_on_health_start)
+		if get_parent().has_signal("health_changed"):
+			get_parent().health_changed.connect(_on_health_changed)
+	call_deferred("_sync_initial_health")
 
-
-func _set_max_health(val: int) -> void:
-	# clamp to at least 1px wide
-	start_health = max(val, 1)
-	# resize frame and clamp fill
-	background.size   = Vector2(start_health + padding*2, 1 + padding*2)
-	current_health    = clamp(current_health, 0, start_health)
-	_update_bar()
-
-
-func _set_current_health(val: int) -> void:
-	current_health = clamp(val, 0, start_health)
-	_update_bar()
-
+func _sync_initial_health() -> void:
+	var entity := get_parent()
+	if not entity:
+		return
+	var maximum = entity.get("StartHealth")
+	var current = entity.get("Health")
+	if maximum is int and maximum > 0:
+		start_health = maximum
+		current_health = current if current is int else maximum
+		_update_bar()
 
 func _create_bar() -> void:
 	background = ColorRect.new()
-	background.name  = "Background"
-	background.color = Color(0.1, 0.1, 0.1)
-	background.anchor_left   = 0
-	background.anchor_top    = 0
-	background.anchor_right  = 0
-	background.anchor_bottom = 0
+	background.color = Color("07101a")
 	add_child(background)
+	missing_health = ColorRect.new()
+	missing_health.color = Color("b83b4b")
+	background.add_child(missing_health)
+	health_fill = ColorRect.new()
+	health_fill.color = Color("5ee36e")
+	background.add_child(health_fill)
+	_update_bar()
 
-	green_bar = ColorRect.new()
-	green_bar.name  = "GreenBar"
-	green_bar.color = Color(0, 1, 0)
-	green_bar.anchor_left   = 0
-	green_bar.anchor_top    = 0
-	green_bar.anchor_right  = 0
-	green_bar.anchor_bottom = 0
-	background.add_child(green_bar)
+func _on_health_start(new_maximum: float, _snap_value: float) -> void:
+	start_health = max(int(new_maximum), 1)
+	current_health = start_health
+	_update_bar()
 
-	red_bar = ColorRect.new()
-	red_bar.name  = "RedBar"
-	red_bar.color = Color(1, 0, 0)
-	red_bar.anchor_left   = 0
-	red_bar.anchor_top    = 0
-	red_bar.anchor_right  = 0
-	red_bar.anchor_bottom = 0
-	background.add_child(red_bar)
-
+func _on_health_changed(new_health: float, _snap_value: float) -> void:
+	current_health = clampi(int(new_health), 0, start_health)
+	_update_bar()
 
 func _update_bar() -> void:
-	# position the frame so it always has `padding` on all sides
-	background.position = offset - Vector2(padding, padding)
-
-	# size the two 1px-tall bars
-	green_bar.size = Vector2(current_health, 1)
-	red_bar.size   = Vector2(start_health - current_health, 1)
-
-	# and place them inside the padding
-	green_bar.position = Vector2(padding, padding)
-	red_bar.position   = Vector2(padding + current_health, padding)
-
-
-# Optional signal handlers, if your parent still emits these:
-func _on_health_start(new_max: float, snap_val: float) -> void:
-	_set_max_health(int(new_max))
-	_set_current_health(int(new_max))
-
-func _on_health_changed(new_health: float, snap_val: float) -> void:
-	_set_current_health(int(new_health))
+	if not is_instance_valid(background):
+		return
+	var frame_size := Vector2(BAR_WIDTH + BORDER * 2.0, BAR_HEIGHT + BORDER * 2.0)
+	size = frame_size
+	position = Vector2(-frame_size.x * 0.5, below_entity_offset)
+	background.size = frame_size
+	missing_health.position = Vector2(BORDER, BORDER)
+	missing_health.size = Vector2(BAR_WIDTH, BAR_HEIGHT)
+	var health_ratio: float = clampf(float(current_health) / float(max(start_health, 1)), 0.0, 1.0)
+	health_fill.position = Vector2(BORDER, BORDER)
+	health_fill.size = Vector2(round(BAR_WIDTH * health_ratio), BAR_HEIGHT)
+	visible = current_health > 0

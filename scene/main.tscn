@@ -4,7 +4,6 @@
 [ext_resource type="Script" uid="uid://b4sec32onjswj" path="res://addons/phantom_camera/scripts/phantom_camera_host/phantom_camera_host.gd" id="2_b6ft4"]
 [ext_resource type="Script" uid="uid://cmkd3ujad4rdk" path="res://addons/phantom_camera/scripts/phantom_camera/phantom_camera_2d.gd" id="3_edxbt"]
 [ext_resource type="Script" uid="uid://bjcfai4tphrnw" path="res://addons/phantom_camera/scripts/resources/tween_resource.gd" id="4_vv8ep"]
-[ext_resource type="PackedScene" uid="uid://bam1m8moww5xl" path="res://scene/bot.tscn" id="5_gik3h"]
 [ext_resource type="PackedScene" uid="uid://b6axn4fx8y26r" path="res://scene/player.tscn" id="5_sgg8r"]
 [ext_resource type="Script" uid="uid://dyrkjtgpxaje4" path="res://scripts/world/daytime_manager.gd" id="6_6yb26"]
 [ext_resource type="Script" uid="uid://b7k77ypxy1qeb" path="res://scripts/combat/enemy_spawner.gd" id="8_mswub"]
@@ -12,6 +11,7 @@
 [ext_resource type="Script" uid="uid://cxynd3krrhqxm" path="res://scripts/ui/bot_control.gd" id="10_iudal"]
 [ext_resource type="Script" uid="uid://dkos0vilui2kt" path="res://scripts/ui/item_list_scroller.gd" id="13_d45ii"]
 [ext_resource type="TileSet" uid="uid://c1y28xx2h0sj" path="res://assets/new_tile_set.tres" id="14_bb6ar"]
+[ext_resource type="Script" path="res://scripts/game/game_controller.gd" id="15_game"]
 
 [sub_resource type="Environment" id="Environment_nu77f"]
 background_mode = 3
@@ -69,6 +69,7 @@ ItemList/styles/focus = SubResource("StyleBoxEmpty_suylp")
 [node name="main" type="Node2D"]
 z_as_relative = false
 y_sort_enabled = true
+script = ExtResource("15_game")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_nu77f")
@@ -98,38 +99,6 @@ script = ExtResource("2_b6ft4")
 [node name="characters" type="Node2D" parent="."]
 z_as_relative = false
 y_sort_enabled = true
-
-[node name="BOT0" parent="characters" instance=ExtResource("5_gik3h")]
-
-[node name="BOT1" parent="characters" instance=ExtResource("5_gik3h")]
-StartHealth = 15
-gunnumber = 1
-activeAnimator = 1
-
-[node name="BOT2" parent="characters" instance=ExtResource("5_gik3h")]
-StartHealth = 18
-gunnumber = 2
-activeAnimator = 2
-
-[node name="BOT3" parent="characters" instance=ExtResource("5_gik3h")]
-StartHealth = 13
-gunnumber = 3
-activeAnimator = 3
-
-[node name="BOT4" parent="characters" instance=ExtResource("5_gik3h")]
-StartHealth = 13
-gunnumber = 4
-activeAnimator = 4
-
-[node name="BOT5" parent="characters" instance=ExtResource("5_gik3h")]
-StartHealth = 13
-gunnumber = 5
-activeAnimator = 5
-
-[node name="BOT6" parent="characters" instance=ExtResource("5_gik3h")]
-StartHealth = 13
-gunnumber = 15
-activeAnimator = 6
 
 [node name="OldMan" parent="characters" instance=ExtResource("5_sgg8r")]
 
@@ -204,6 +173,7 @@ tile_set = ExtResource("14_bb6ar")
 collision_enabled = false
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
+visible = false
 unique_name_in_owner = true
 visible = false
 script = ExtResource("10_iudal")

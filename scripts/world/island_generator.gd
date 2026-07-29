@@ -16,6 +16,9 @@ extends Node2D
 const MAX_MAP_ATTEMPTS := 3
 const MAX_HILL_PLACEMENT_ATTEMPTS := 64
 const MAX_SCENE_PLACEMENT_ATTEMPTS := 128
+# Keep a walkable grass buffer around raised terrain. A single tile between a
+# hill and the island drop-off looks broken and leaves no useful path space.
+const HILL_EDGE_MARGIN := 2
 
 # Layer References
 @onready var bottom_items_layer: TileMapLayer = %BotItems
@@ -178,13 +181,18 @@ func generate_map() -> bool:
 	
 	apply_second_layer_filters()
 	
-	var random_core_num = randi_range(0, hill_count - 1)
+	# The core is the visual and gameplay centre of the island. Reserve its hill
+	# near the centre, then scatter the remaining hills around it.
+	var random_core_num = 0
 	for hill_index in range(hill_count):
 		var hill_placed = false
-		for placement_attempt in range(MAX_HILL_PLACEMENT_ATTEMPTS):
-			hill_placed = generate_hill(hill_index, hill_count, random_core_num)
-			if hill_placed:
-				break
+		if hill_index == random_core_num:
+			hill_placed = _find_center_hill_position(hill_index, hill_count, random_core_num)
+		else:
+			for placement_attempt in range(MAX_HILL_PLACEMENT_ATTEMPTS):
+				hill_placed = generate_hill(hill_index, hill_count, random_core_num)
+				if hill_placed:
+					break
 		if not hill_placed:
 			hill_placed = _find_hill_position(hill_index, hill_count, random_core_num)
 		if not hill_placed:
@@ -197,12 +205,6 @@ func generate_map() -> bool:
 	# Generate scenes/objects
 	if not generate_scene(1):  # Computer
 		return false
-	for i in range(7):
-		if not generate_scene(2):  # Seats
-			return false
-	for i in range(7):
-		if not generate_scene(4 + i):  # Chargers
-			return false
 	for i in range(10):
 		if not generate_scene(4):  # Companions
 			return false
@@ -338,9 +340,24 @@ func _find_hill_position(hill_index: int, total_hills: int, random_core_num: int
 				return true
 	return false
 
+func _find_center_hill_position(hill_index: int, total_hills: int, random_core_num: int) -> bool:
+	var center := Vector2i(Global.islandSize.x / 2 - hill_size.x / 2, Global.islandSize.y / 2 - hill_size.y / 2)
+	for radius in range(0, 17):
+		for y in range(center.y - radius, center.y + radius + 1):
+			for x in range(center.x - radius, center.x + radius + 1):
+				if abs(x - center.x) != radius and abs(y - center.y) != radius:
+					continue
+				if x < 0 or y < 0 or x >= Global.islandSize.x - hill_size.x or y >= Global.islandSize.y - hill_size.y:
+					continue
+				if generate_hill(hill_index, total_hills, random_core_num, Vector2i(x, y)):
+					return true
+	return false
+
 func generate_hill(hill_index: int, total_hills: int, random_core_num: int, origin: Vector2i = Vector2i(-1, -1)) -> bool:
 	var x_pos = origin.x if origin.x >= 0 else randi_range(0, Global.islandSize.x)
 	var y_pos = origin.y if origin.y >= 0 else randi_range(0, Global.islandSize.y)
+	if not _has_hill_edge_clearance(Vector2i(x_pos, y_pos)):
+		return false
 	var all_on_grass = true
 	var hill_positions: Array[Vector2i] = []
 	var temp_core_pos: Vector2i = Vector2i.ZERO
@@ -378,6 +395,24 @@ func generate_hill(hill_index: int, total_hills: int, random_core_num: int, orig
 			hill_layer.set_cell(pos, 0, TILE_ATLAS["hill"])
 	
 	return all_on_grass
+
+func _has_hill_edge_clearance(origin: Vector2i) -> bool:
+	var minimum := HILL_EDGE_MARGIN
+	var maximum_x := origin.x + hill_size.x - 1 + HILL_EDGE_MARGIN
+	var maximum_y := origin.y + hill_size.y - 1 + HILL_EDGE_MARGIN
+	if origin.x < minimum or origin.y < minimum:
+		return false
+	if maximum_x >= Global.islandSize.x or maximum_y >= Global.islandSize.y:
+		return false
+
+	# Demand a complete two-tile grass ring, including corners. This checks the
+	# true noise-shaped edge rather than only the rectangular map boundary.
+	for y in range(origin.y - HILL_EDGE_MARGIN, maximum_y + 1):
+		for x in range(origin.x - HILL_EDGE_MARGIN, maximum_x + 1):
+			var cell := Vector2i(x - Global.islandSize.x / 2, y - Global.islandSize.y / 2)
+			if not is_grass(grass_layer.get_cell_atlas_coords(cell)):
+				return false
+	return true
 
 func find_highest_point(noise: FastNoiseLite) -> Vector2i:
 	var highest_noise = -INF
@@ -546,6 +581,48 @@ func apply_collision_filters():
 			
 			if is_hill(hill_me):
 				grass_layer.set_cell(set_cell_down, 0, TILE_ATLAS["grass_collision_all"])
+
+## Returns a nearby interior grass tile suitable for characters and support
+## buildings. The four-neighbour test deliberately keeps targets away from the
+## generated island edge and raised hill collision tiles.
+func nearest_open_ground_world_position(desired: Vector2, fallback: Vector2, avoid_position := Vector2.ZERO, avoid_radius := 0.0) -> Vector2:
+	var desired_cell := grass_layer.local_to_map(grass_layer.to_local(desired))
+	for radius in range(0, 28):
+		for y in range(desired_cell.y - radius, desired_cell.y + radius + 1):
+			for x in range(desired_cell.x - radius, desired_cell.x + radius + 1):
+				if radius > 0 and abs(x - desired_cell.x) != radius and abs(y - desired_cell.y) != radius:
+					continue
+				var cell := Vector2i(x, y)
+				var world_position := grass_layer.to_global(grass_layer.map_to_local(cell))
+				if avoid_radius > 0.0 and world_position.distance_to(avoid_position) < avoid_radius:
+					continue
+				if _is_interior_open_ground(cell):
+					return world_position
+	return fallback
+
+func is_world_position_on_island(world_position: Vector2) -> bool:
+	var cell := grass_layer.local_to_map(grass_layer.to_local(world_position))
+	return grass_layer.get_cell_source_id(cell) != -1 and hill_layer.get_cell_source_id(cell) == -1
+
+func _is_interior_open_ground(cell: Vector2i) -> bool:
+	if hill_layer.get_cell_source_id(cell) != -1 or grass_layer.get_cell_source_id(cell) == -1:
+		return false
+	for neighbour: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+		var adjacent: Vector2i = cell + neighbour
+		if hill_layer.get_cell_source_id(adjacent) != -1 or grass_layer.get_cell_source_id(adjacent) == -1:
+			return false
+	return true
+
+func describe_tiles_around_world_position(world_position: Vector2) -> String:
+	var center := grass_layer.local_to_map(grass_layer.to_local(world_position))
+	var tiles: Array[String] = []
+	for y in range(center.y - 1, center.y + 2):
+		for x in range(center.x - 1, center.x + 2):
+			var cell := Vector2i(x, y)
+			var grass_tile := grass_layer.get_cell_atlas_coords(cell)
+			var hill_tile := hill_layer.get_cell_atlas_coords(cell)
+			tiles.append("(%d,%d) grass=%s hill=%s" % [x, y, grass_tile, hill_tile])
+	return "; ".join(tiles)
 
 func is_grass(tile: Vector2i) -> bool:
 	return tile in [

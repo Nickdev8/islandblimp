@@ -1,10 +1,13 @@
 extends Node
 
-## Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-	#RenderingServer.set_default_clear_color(Color(0,0,0))
-	pass
+	Global.phase_changed.connect(_on_phase_changed)
+	_on_phase_changed(Global.phase)
 
-## Called every frame. 'delta' is the elapsed time since the previous frame.
-#func _process(delta: float) -> void:
-#	pass
+func _on_phase_changed(phase: Global.RunPhase) -> void:
+	if phase == Global.RunPhase.NIGHT:
+		RenderingServer.set_default_clear_color(Color("15213d"))
+	elif phase == Global.RunPhase.GAME_OVER:
+		RenderingServer.set_default_clear_color(Color("230c18"))
+	else:
+		RenderingServer.set_default_clear_color(Color("76b8d7"))
